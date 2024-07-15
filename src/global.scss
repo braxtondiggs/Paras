@@ -39,6 +39,25 @@ ion-datetime::part(calendar-day active) {
   }
 }
 
+ion-datetime::part(month-year-button) {
+  pointer-events: none;
+  &::after {
+    background-color: var(--ion-color-primary-contrast);
+    content: " ";
+    display: block;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 30px;
+    z-index: 1;
+  }
+}
+
+
+ion-select.ion-valid {
+  --highlight-color: var(--ion-color-primary);
+}
 
 body.dark {
   .horizontal-container {
@@ -53,6 +72,10 @@ body.dark {
         color: var(--ion-color-step-900) !important;
       }
     }
+  }
+
+  ion-datetime::part(month-year-button)::after {
+    background-color: var(--ion-color-step-100);
   }
 }
 

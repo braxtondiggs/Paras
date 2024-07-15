@@ -20,7 +20,7 @@ const IonComponents = [
 
 @Component({
   standalone: true,
-  providers: [LaunchReview, InAppPurchase2],
+  providers: [LaunchReview],
   imports: [
     NgIf,
     ReactiveFormsModule,
@@ -42,6 +42,9 @@ export class SettingsPage implements OnInit {
   isFirst = false;
   token?: string | null;
   isiOS?: boolean;
+  store?: CdvPurchase.Store;
+  product?: CdvPurchase.Product;
+  purchasePlatform = CdvPurchase.Platform.GOOGLE_PLAY;
 
   constructor(
     private auth: AuthService,
@@ -50,7 +53,6 @@ export class SettingsPage implements OnInit {
     private loading: LoadingController,
     private picker: PickerController,
     private platform: Platform,
-    private store: InAppPurchase2,
     private toast: ToastController) {
     dayjs.extend(objectSupport);
     dayjs.extend(customParseFormat);
@@ -66,6 +68,26 @@ export class SettingsPage implements OnInit {
     this.settingsForm = this.fb.group(this.settings);
     this.isiOS = this.platform.is('ios');
     addIcons({ heart, thumbsUp, informationCircle, moon });
+    this.platform.ready().then(() => {
+      this.store = CdvPurchase.store;
+      
+      this.store?.register({
+        id: 'donation_99',
+        type: CdvPurchase.ProductType.CONSUMABLE,
+        platform: this.purchasePlatform
+      });
+
+      console.log(this.store)
+  
+      this.store?.when()
+        .approved((receipt) => receipt.verify())
+        .verified(async (receipt) => {
+          receipt.finish();
+          const toast = await this.toast.create({ message: 'Your support is always appreciated!', duration: 10000 });
+          toast.present();
+        });
+      this.store?.initialize([this.purchasePlatform]);
+    });
   }
 
   async ngOnInit() {
@@ -92,16 +114,16 @@ export class SettingsPage implements OnInit {
       });
     }
 
-    this.settingsForm.controls['today'].valueChanges.subscribe(today => {
+    this.settingsForm.controls['today'].valueChanges.subscribe(async today => {
       if (!today) return;
       if (today === 'custom') return this.openTimePicker('today');
-      this.save({ today });
+      await this.save({ today });
     });
 
-    this.settingsForm.controls['nextDay'].valueChanges.subscribe(nextDay => {
+    this.settingsForm.controls['nextDay'].valueChanges.subscribe(async nextDay => {
       if (!nextDay) return;
       if (nextDay === 'custom') return this.openTimePicker('nextDay');
-      this.save({ nextDay });
+      await this.save({ nextDay });
     });
 
     this.settingsForm.controls['darkMode'].valueChanges.subscribe(async (value) => {
@@ -112,18 +134,19 @@ export class SettingsPage implements OnInit {
     });
   }
 
-  onCheckBoxChange(ev: Event, action: string) {
+  async onCheckBoxChange(ev: Event, action: string) {
     const checked = (ev as any).detail.checked;
-    this.save({ [action]: checked });
+    await this.save({ [action]: checked });
     logEvent(this.analytics, 'custom_event', { action, active: checked.toString() });
     setUserProperties(this.analytics, { [action]: checked.toString() });
   }
 
-  save(data: Setting): void {
+  async save(data: Setting): Promise<void> {
     let t: HTMLIonToastElement;
+    const { receive } = await PushNotifications.checkPermissions();
     const createdAt = this.isFirst ? new Date() : null;
     data = this.omitByNil({ ...data, token: this.token, type: 'NYC', updateAt: new Date(), createdAt });
-    if (data.token !== undefined) {
+    if (data.token !== undefined && receive === 'granted') {
       setDoc(doc(this.afs, `notifications/${this.uid}`) as DocumentReference<Setting>, data, { merge: true }).then(async () => {
         t = await this.toast.create({
           color: 'dark',
@@ -140,6 +163,13 @@ export class SettingsPage implements OnInit {
         t.present();
         this.isFirst = false;
       });
+    } else if (receive === 'denied') {
+      t = await this.toast.create({
+        color: 'danger',
+        duration: 1500,
+        message: 'Please enable push notifications.'
+      });
+      t.present();
     }
   }
 
@@ -169,7 +199,7 @@ export class SettingsPage implements OnInit {
     const maxTime = dayjs().set({ hour: 7, minute: 29 });
     if (dayjs(date, 'h:mmA').isBefore(maxTime)) return this.showAlert(maxTime);
     this.settings.todayCustom = dayjs(date, 'h:mmA').format(this.format);
-    this.save({ today: this.settingsForm.value.today, todayCustom: this.settings.todayCustom });
+    await this.save({ today: this.settingsForm.value.today, todayCustom: this.settings.todayCustom });
   }
 
   onTodayCancel() {
@@ -180,7 +210,7 @@ export class SettingsPage implements OnInit {
     const maxTime = dayjs().set({ hour: 15, minute: 59 });
     if (dayjs(date, 'h:mmA').isBefore(maxTime)) return this.showAlert(maxTime);
     this.settings.nextDayCustom = dayjs(date, 'h:mmA').format(this.format);
-    this.save({ nextDay: this.settingsForm.value.nextDay, nextDayCustom: this.settings.nextDayCustom });
+    await this.save({ nextDay: this.settingsForm.value.nextDay, nextDayCustom: this.settings.nextDayCustom });
   }
 
   onNextDateCancel() {
@@ -233,25 +263,8 @@ export class SettingsPage implements OnInit {
         }, {
           text: 'Yes, Please',
           handler: () => {
-            this.store.register({
-              id: 'donation_99',
-              type: this.store.CONSUMABLE,
-            });
-
-            this.store.when('donation_99')
-              .approved((p: IAPProduct) => p.verify())
-              .verified(async (p: IAPProduct) => {
-                p.finish();
-                const toast = await this.toast.create({ message: 'Your support is always appreciated!', duration: 10000 });
-                toast.present();
-              })
-              .error(async () => {
-                const toast = await this.toast.create({ message: 'Something went wrong', duration: 10000 });
-                toast.present();
-              });
-            this.store.refresh();
-
-            this.store.order('donation_99');
+            this.product = this.store?.get('donation_99', this.purchasePlatform);
+            this.product?.getOffer()?.order();
           }
         }
       ]
@@ -354,10 +367,12 @@ import { traceUntilFirst } from '@angular/fire/performance';
 
 import { AuthService } from '../core/services';
 import { Setting } from '../core/interface';
+import { PushNotifications, Token } from '@capacitor/push-notifications';
 import { Preferences } from '@capacitor/preferences';
 import { EmailComposer } from 'capacitor-email-composer';
 import { LaunchReview } from '@awesome-cordova-plugins/launch-review/ngx';
-import { InAppPurchase2, IAPProduct } from '@awesome-cordova-plugins/in-app-purchase-2/ngx';
+
 import dayjs, { Dayjs } from 'dayjs';
 import objectSupport from 'dayjs/plugin/objectSupport';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
+import 'cordova-plugin-purchase';

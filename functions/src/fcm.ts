@@ -1,109 +1,111 @@
-import { MessagingPayload, getMessaging } from "firebase-admin/messaging";
+import { MessagingPayload, getMessaging } from 'firebase-admin/messaging';
 import { Firestore, QueryDocumentSnapshot, WriteResult } from 'firebase-admin/firestore';
+import { Feed, Notification } from './types';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc'
+import tz from 'dayjs/plugin/timezone'
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 
-const payload: MessagingPayload = {
+dayjs.extend(utc);
+dayjs.extend(tz);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+
+const basePayload: MessagingPayload = {
   notification: {
     title: 'Alternate Side Parking'
   }
 };
 
-async function getImmediateNotifications(db: Firestore, action: string) {
-  const isToday = action === 'today';
-  const id = isToday ? dayjs().format('YYYYMMDD') : dayjs().add(1, 'day').format('YYYYMMDD');
+async function sendToDevices(tokens: string[], body: string, snapshots: QueryDocumentSnapshot[]) {
+  const messaging = getMessaging();
+  const payload = { ...basePayload, notification: { ...basePayload.notification, body } };
+  const messages = tokens.map(token => ({ ...payload, token }));
+
+  try {
+    const response = await messaging.sendAll(messages);
+    const deadTokens: Promise<WriteResult>[] = [];
+    response.responses.forEach((result, index) => {
+      if (!result.success) {
+        const error = result.error;
+        console.error(`Failure sending notification to token ${tokens[index]}:`, error);
+        
+        // Handle invalid or unregistered tokens
+        if (error && error.code === 'messaging/invalid-registration-token' || 
+            error && error.code === 'messaging/registration-token-not-registered') {
+          console.log(`Deleting token: ${tokens[index]}`);
+          deadTokens.push(snapshots[index].ref.delete());
+        }
+      }
+    });
+
+    // Await deletion of all invalid tokens
+    if (deadTokens.length > 0) {
+      await Promise.all(deadTokens);
+      console.log(`${deadTokens.length} dead tokens were deleted.`);
+    }
+  } catch (error) {
+    console.error("An error occurred while sending notifications:", error);
+  }
+}
+
+// Function to process and send notifications
+async function sendNotifications(db: Firestore, action: string, type: string) {
+  const id = getFormattedDateID(action);
   const feedSnap = await db.collection('feed').doc(id).get();
   if (!feedSnap.exists) return;
+  
   const { active, text } = feedSnap.data() as Feed;
-  const query = await db.collection('notifications').where(action, '==', 'immediately').where('type', '==', 'NYC').get();
+  const notificationBody = action === 'today' ? text : text.replaceAll(/\./g, ' tomorrow.');
+  const tokens: string[] = [];
   const promise: QueryDocumentSnapshot[] = [];
-  const tokens: string[] = [];
-  if (payload.notification) payload.notification.body = !isToday  ? text.replaceAll(/\./g, ' tomorrow.') : text;
-  query.forEach(snapshot => promise.push(snapshot));
-  for (const snapshot of promise) {
-    const { exceptionOnly, nextDay, today, token } = snapshot.data();
-    if (token && ((today === 'immediately' && isToday) || (nextDay === 'immediately' && !isToday))) {
-      if (checkException(exceptionOnly, active)) {
+  const querySnapshot = await db.collection('notifications')
+                                 .where(action, '==', type)
+                                 .where('type', '==', 'NYC').get();
+  
+  querySnapshot.forEach(doc => {
+    promise.push(doc);
+    const data = doc.data();
+    const { exceptionOnly, token } = data as Notification;
+    const customType = data[`${action}Custom`];
+    if (token && shouldNotify(exceptionOnly, active)) {
+      if (type === 'custom') {
+        const date = dayjs.tz(`${dayjs().format('MM/DD/YYYY')} ${customType}`, "America/New_York");
+        const today = dayjs().tz("America/New_York");
+        const isCustomActive = date.isSameOrAfter(today) && date.isSameOrBefore(today.add(15, 'minute'));
+        if (isCustomActive) tokens.push(token);
+      } else {
         tokens.push(token);
-      }
-    }
-  }
-
-  await sendToDevices(tokens, promise);
-}
-
-async function getCustomNotifications(db: Firestore) {
-  const data = await db.collection('feed').orderBy('created', 'desc').limit(1).get();
-  let promise: QueryDocumentSnapshot[] = [];
-  data.forEach(snapshot => promise.push(snapshot));
-  let isToday = false;
-  let isActive = false;
-  for (const snapshot of promise) {
-    const { date, text } = snapshot.data();
-    if (payload.notification) payload.notification.body = !isToday  ? text.replaceAll(/\./g, ' tomorrow.') : text;
-    isToday = dayjs(date.toDate()).isSame(dayjs(), 'day');
-  }
-  promise = []; // reset
-  const query = await db.collection('notifications').where(isToday ? 'today' : 'nextDay', '==', 'custom').where('type', '==', 'NYC').get();
-  const tokens: string[] = [];
-  query.forEach(snapshot => promise.push(snapshot));
-  for (const snapshot of promise) {
-    const { exceptionOnly, nextDay, nextDayCustom, today, todayCustom, token } = snapshot.data();
-    let date = isToday ? dayjs().format('MM/DD/YYYY') : dayjs().add(1, 'day').format('MM/DD/YYYY');
-    date = isToday ? `${date} ${todayCustom}` : `${date} ${nextDayCustom}`;
-    isActive = dayjs(date).isAfter(dayjs()) && dayjs(date).isBefore(dayjs().add(15, 'minute'));
-    if ((today === 'custom' && isToday && isActive) || (nextDay === 'custom' && !isToday && isActive)) {
-      if (token && checkException(exceptionOnly, isActive)) {
-        tokens.push(token);
-      }
-    }
-  }
-
-  await sendToDevices(tokens, promise);
-}
-
-async function sendToDevices(tokens: string[], promise: QueryDocumentSnapshot[]) {
-  if (tokens.length <= 0) return;
-  const messaging = getMessaging();
-  const messages = tokens.map(token => ({ ...payload, token }));
-  console.log(`There are ${promise.length} tokens to send notifications to.`);
-  const { responses } = await messaging.sendAll(messages);  // Limit to 500 devices, will need to optimize later
-  const deadTokens: Promise<WriteResult>[] = [];
-  responses.forEach((result, index) => {
-    const error = result.error;
-    if (error) {
-      console.error('Failure sending notification to', tokens[index], error); // Cleanup the tokens who are not registered anymore.
-      if (error.code === 'messaging/invalid-registration-token' || error.code === 'messaging/registration-token-not-registered') {
-        deadTokens.push(promise[index].ref.delete());
       }
     }
   });
-  if (deadTokens.length <= 0) return;
-  return Promise.all(deadTokens);
+
+  if (tokens.length > 0) {
+    // const uniqueTokens = Array.from(new Set(tokens));
+    await sendToDevices(tokens, notificationBody, promise);
+  }
 }
 
-function checkException(exception: boolean, active: boolean): boolean {
-  return exception && active ?  false : true;
+// Function to check exceptions and active status
+function shouldNotify(exceptionOnly: boolean, active: boolean): boolean {
+  return exceptionOnly && active ? false: true;
 }
 
-interface Notification {
-  exceptionOnly: boolean;
-  nextDay: string;
-  nextDayCustom: string;
-  today: string;
-  todayCustom: string;
-  token: string;
-  type: string;
+// Utility function to format date ID based on action
+function getFormattedDateID(action: string): string {
+  return dayjs().add(action === 'today' ? 0 : 1, 'day').format('YYYYMMDD');
 }
 
-
-interface Feed {
-  active: boolean;
-  created: Date;
-  date: string;
-  id: string;
-  metered: boolean;
-  reason: string;
-  text: string;
-  type: string;
+// Exported functions with adjusted parameters to match usage
+async function getImmediateNotifications(db: Firestore, action: string) {
+  await sendNotifications(db, action, 'immediately');
 }
+
+async function getCustomNotifications(db: Firestore) {
+  for (const action of ['today', 'nextDay']) {
+    await sendNotifications(db, action, 'custom');
+  }
+}
+
 export { getImmediateNotifications, getCustomNotifications}

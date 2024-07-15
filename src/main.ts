@@ -33,7 +33,7 @@ const providers = [
     }),
     provideAuth(() => {
       const auth = getAuth();
-      if (!environment.production) connectAuthEmulator(auth, `http://${devHost}:9099`);
+      if (!environment.production) connectAuthEmulator(auth, `http://${devHost}:9099`, { disableWarnings: !environment.production });
       return (auth);
     }),
     provideAnalytics(() => getAnalytics()),

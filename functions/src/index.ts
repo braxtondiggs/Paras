@@ -1,59 +1,79 @@
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-import { getRemoteConfig } from "firebase-admin/remote-config";
-import { log, error } from "firebase-functions/logger";
-import { onSchedule, ScheduleOptions } from "firebase-functions/v2/scheduler";
-import customParseFormat from 'dayjs/plugin/customParseFormat';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getRemoteConfig } from 'firebase-admin/remote-config';
+import { log, error } from 'firebase-functions/logger';
+import { onSchedule, ScheduleOptions } from 'firebase-functions/v2/scheduler';
 
 import axios from 'axios';
 import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat)
 
 import { getImmediateNotifications, getCustomNotifications } from './fcm';
+import { IASPResponse, Status } from './types';
 
-const _app = initializeApp();
+const app = initializeApp();
 const db = getFirestore();
 const config = getRemoteConfig();
 db.settings({ ignoreUndefinedProperties: true });
 
-const getASPData = async (from?: string, to?: string) => {
+async function fetchASPData(fromDate: string, toDate: string, apiKey: string): Promise<IASPResponse> {
+    const url = `https://api.nyc.gov/public/api/GetCalendar?fromdate=${fromDate}&todate=${toDate}`;
+    const headers = { 'Cache-Control': 'no-cache', 'Ocp-Apim-Subscription-Key': apiKey };
+    try {
+        const { data } = await axios.get<IASPResponse>(url, { headers });
+        return data;
+    } catch (err) {
+        error('Failed to fetch ASP data', err);
+        throw err; // Rethrow to handle it in the calling function
+    }
+}
+
+async function getASPData(from?: string, to?: string) {
 	const fromDate = from ?? dayjs().format('YYYY-MM-DD');
 	const toDate = to ?? dayjs().add(1, 'day').format('YYYY-MM-DD');
-	log('getASPData', fromDate, toDate);
-	const { parameters  } = await config.getTemplate();
+	log('Fetching ASP data', fromDate, toDate);
+
+	const { parameters } = await config.getTemplate();
 	const APIKEY = (parameters.ASPKEY.defaultValue as any).value;
-	if (!APIKEY) error('Missing APIKEY');
+	if (!APIKEY){
+		error('Missing API key for ASP data fetching.');
+		return;
+	}
 
 	try {
-		const { data } = await axios.get<IASPResponse>(`https://api.nyc.gov/public/api/GetCalendar?fromdate=${fromDate}&todate=${toDate}`, {
-			headers: {
-				'Cache-Control': 'no-cache',
-				'Ocp-Apim-Subscription-Key': APIKEY
-			}
-		});
-		
+		const data = await fetchASPData(fromDate, toDate, APIKEY);
 		const batch = db.batch();
-		data.days.forEach(({ today_id, items }) => {
-			const item = items.find(({ type, exceptionName: reason, details: text }) => type === 'Alternate Side Parking' && reason !== 'Information Not Available' && !text.includes('Sundays'));
-			const feedRef = db.doc(`feed/${today_id}`);
-			if (item === undefined) return batch.delete(feedRef);
-			const { exceptionName, details, status } = item;
-			batch.set(feedRef, {
-				active: status === Status.Active,
-				created: Timestamp.fromDate(dayjs().toDate()),
-				date: Timestamp.fromDate(dayjs(today_id, 'YYYYMMDD').startOf('day').add(5, 'hour').toDate()),
-				id: today_id,
-				metered: isMetered(details),
-				reason: exceptionName || getReason(details),
-				text: details,
-				type: 'NYC'
-			});
-		});
+		processASPData(data, batch);
 		await batch.commit();
 	} catch (err) {
-		error(err);
+		error('Error processing ASP data:', err);
 	}
-};
+}
+
+function processASPData(data: IASPResponse, batch: FirebaseFirestore.WriteBatch) {
+	data.days.forEach(({ today_id, items }) => {
+        const feedRef = db.doc(`feed/${today_id}`);
+        const item = items.find(i => isValidItem(i));
+        if (!item) return batch.delete(feedRef);
+
+        const { exceptionName, details, status } = item;
+        batch.set(feedRef, {
+            active: status === Status.Active,
+            created: Timestamp.now(),
+            date: dayjs(today_id, 'YYYYMMDD').startOf('day').add(5, 'hours').toDate(),
+            id: today_id,
+            metered: isMetered(details),
+            reason: exceptionName || getReason(details),
+            text: details,
+            type: 'NYC'
+        });
+    });
+}
+
+function isValidItem(item: any) {
+    return item.type === 'Alternate Side Parking' && item.exceptionName !== 'Information Not Available' && !item.details.includes('Sundays');
+}
 
 const getASPMonth = async () => {
 	log('getASPMonth');
@@ -97,20 +117,3 @@ exports.getASPMonth = onSchedule(getSchedule('30 19 1 * *'), async () => await g
 exports.getCustomNotifications = onSchedule(getSchedule('every 15 minutes'), async () => await getCustomNotifications(db));
 exports.getNotificationsToday = onSchedule(getSchedule('30 7 * * *'), async () => await getImmediateNotifications(db, 'today'));
 exports.getNotificationsTomorrow = onSchedule(getSchedule('0 16 * * *'), async () => await getImmediateNotifications(db, 'nextDay'));
-
-enum Status {
-	Suspended = 'SUSPENDED',
-	Active = 'IN EFFECT'
-}
-
-interface IASPResponse {
-	days: {
-		today_id: string;
-		items: {
-			type: string;
-			exceptionName?: string;
-			details: string;
-			status: Status;
-		}[];
-	}[];
-}
