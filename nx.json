@@ -41,5 +41,6 @@
     "e2e": {
       "cache": true
     }
-  }
+  },
+  "nxCloudAccessToken": "MzhmNjUzMDUtMzhkZS00ZWI0LWE1YTgtMGY4NTNiMzI4MjJkfHJlYWQtd3JpdGU="
 }
