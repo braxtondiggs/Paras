@@ -1,0 +1,34 @@
+<ion-header translucent no-border>
+  <ion-toolbar>
+    <ion-title>ASP NYC</ion-title>
+    <ion-buttons slot="primary">
+      <ion-button (click)="switchCalenderView()">
+        <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/settings">
+        <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content fullscreen>
+  <swiper-container #swiper [allowTouchMove]="false" [initialSlide]="activeSlide()">
+    <swiper-slide>
+      <horizontal-calendar></horizontal-calendar>
+    </swiper-slide>
+    <swiper-slide>
+      <ion-datetime
+        #calendar
+        [value]="selectedDate()"
+        [min]="minDate()"
+        [max]="maxDate()"
+        [highlightedDates]="highlightedDates()"
+        (ionChange)="onChange($event)"
+        size="cover"
+        mode="md"
+        presentation="date"
+      >
+      </ion-datetime>
+    </swiper-slide>
+  </swiper-container>
+</ion-content>

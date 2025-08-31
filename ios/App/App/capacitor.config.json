@@ -9,5 +9,14 @@
 			"sound",
 			"alert"
 		]
-	}
+	},
+	"packageClassList": [
+		"AppPlugin",
+		"HapticsPlugin",
+		"CAPNetworkPlugin",
+		"PreferencesPlugin",
+		"PushNotificationsPlugin",
+		"EmailComposerPlugin",
+		"CDVPlugin"
+	]
 }

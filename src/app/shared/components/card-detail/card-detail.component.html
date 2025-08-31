@@ -1,0 +1,36 @@
+<div class="card-container">
+  @if (detail(); as detail) {
+    <ion-card>
+      <ion-card-header [color]="detail.active ? 'primary' : 'danger'">
+        <span class="date">{{ detail.date }}</span>
+        <span class="status">
+          <ion-icon [name]="!detail.active ? 'close-circle-outline' : 'checkmark-circle-outline'"></ion-icon>
+        </span>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item lines="none">
+            <ion-text>
+              Alt. parking in effect?&nbsp;<strong>{{ detail.active ? 'Yes' : 'No' }}</strong>
+            </ion-text>
+          </ion-item>
+          @if (detail.reason && !detail.active) {
+            <ion-item lines="none">
+              <ion-text class="ion-text-wrap">
+                Explanation:&nbsp;<strong>{{ detail.reason }}</strong>
+              </ion-text>
+            </ion-item>
+          }
+          <ion-item lines="none">
+            <ion-text class="ion-text-wrap">
+              Meters in effect?:&nbsp;<strong>{{ detail.metered ? 'Yes' : 'No' }}</strong>
+            </ion-text>
+          </ion-item>
+        </ion-list>
+        @if (detail.lastUpdated) {
+          <div class="updated">Updated {{ detail.created }}</div>
+        }
+      </ion-card-content>
+    </ion-card>
+  }
+</div>

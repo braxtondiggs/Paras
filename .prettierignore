@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+www/
+coverage/
+
+# Mobile platforms
+android/
+ios/
+
+# Functions
+functions/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+.DS_Store
+.vscode/
+.idea/
+
+# Package files
+*.tgz
+*.tar.gz
+
+# Config files
+*.config.js
+capacitor.config.json
+
+# Generated files
+*.d.ts
+!src/**/*.d.ts
