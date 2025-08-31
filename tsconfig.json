@@ -3,6 +3,15 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./src",
+    "paths": {
+      "@app/*": ["app/*"],
+      "@shared/*": ["app/shared/*"],
+      "@features/*": ["app/features/*"],
+      "@data/*": ["app/data/*"],
+      "@layout/*": ["app/layout/*"],
+      "@environments/*": ["environments/*"],
+      "@assets/*": ["assets/*"]
+    },
     "declaration": false,
     "downlevelIteration": true,
     "emitDecoratorMetadata": true,
@@ -10,10 +19,7 @@
     "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "module": "es2020",
     "moduleResolution": "node",
     "noFallthroughCasesInSwitch": true,
@@ -22,14 +28,10 @@
     "sourceMap": true,
     "strict": true,
     "target": "es2020",
-    "typeRoots": [
-      "node_modules/@types"
-    ],
-    "types": [
-      "jest",
-      "node"
-    ]
+    "typeRoots": ["node_modules/@types"],
+    "types": ["jest", "node"]
   },
+  "exclude": ["node_modules", "dist", "out-tsc", "functions", "android", "ios"],
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
     "strictInjectionParameters": true,

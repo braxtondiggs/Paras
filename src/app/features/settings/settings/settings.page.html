@@ -1,0 +1,94 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Settings</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content fullscreen>
+  @if (!isLoading()) {
+    <form [formGroup]="settingsForm()">
+      @if (!isiOS()) {
+        <ion-list lines="none">
+          <ion-item>
+            <ion-select
+              formControlName="today"
+              label="Current Day Notification"
+              interface="popover"
+              aria-label="Current Day Notification"
+            >
+              <ion-select-option value="none">None</ion-select-option>
+              <ion-select-option value="immediately">Immediately</ion-select-option>
+              <ion-select-option value="custom">Custom</ion-select-option>
+            </ion-select>
+            <ion-note>
+              {{ getNotificationMessage('today', settingsForm().value.today) }}
+            </ion-note>
+          </ion-item>
+          <ion-item>
+            <ion-select
+              formControlName="nextDay"
+              label="Next Day Notification"
+              interface="popover"
+              aria-label="Next Day Notification"
+            >
+              <ion-select-option value="none">None</ion-select-option>
+              <ion-select-option value="immediately">Immediately</ion-select-option>
+              <ion-select-option value="custom">Custom</ion-select-option>
+            </ion-select>
+            <ion-note>
+              {{ getNotificationMessage('nextday', settingsForm().value.nextDay) }}
+            </ion-note>
+          </ion-item>
+        </ion-list>
+        <ion-list lines="none">
+          <ion-item>
+            <ion-checkbox
+              formControlName="exceptionOnly"
+              (ionChange)="onCheckBoxChange($event, 'exceptionOnly')"
+              aria-label="Exception Notifications Only"
+            >
+              Exception Notifications Only:
+            </ion-checkbox>
+          </ion-item>
+          <ion-item>
+            <ion-checkbox
+              formControlName="weekend"
+              (ionChange)="onCheckBoxChange($event, 'weekend')"
+              aria-label="Weekend Notifications"
+            >
+              Weekend Notifications:
+            </ion-checkbox>
+          </ion-item>
+        </ion-list>
+      }
+      <br />
+      <ion-list lines="none">
+        <ion-item-group>
+          <ion-list-header>
+            <ion-label color="primary">Other</ion-label>
+          </ion-list-header>
+          <ion-item>
+            <ion-toggle formControlName="darkMode" aria-label="Dark Mode">Dark Mode</ion-toggle>
+            <ion-icon name="moon" slot="start"></ion-icon>
+          </ion-item>
+          <ion-item (click)="about()">
+            <ion-label> About this App </ion-label>
+            <ion-icon name="information-circle" slot="start"></ion-icon>
+          </ion-item>
+          <ion-item (click)="rate()" detail>
+            <ion-label> Rate Us On The App Store </ion-label>
+            <ion-icon name="thumbs-up" slot="start"></ion-icon>
+          </ion-item>
+          @if (!isiOS()) {
+            <ion-item (click)="donate()">
+              <ion-label> Support Development </ion-label>
+              <ion-icon name="heart" slot="start"></ion-icon>
+            </ion-item>
+          }
+        </ion-item-group>
+      </ion-list>
+    </form>
+  }
+</ion-content>

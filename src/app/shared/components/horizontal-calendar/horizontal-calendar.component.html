@@ -1,0 +1,42 @@
+<div class="container">
+  <div class="horizontal-container">
+    @if (active(); as activeItem) {
+      <div class="month">{{ activeItem.month.long }}</div>
+    }
+    <div class="swiper-container">
+      <swiper-container
+        #swiper
+        [initialSlide]="6"
+        [slidesPerView]="7"
+        [spaceBetween]="4"
+        [centeredSlides]="true"
+        (swiperslidechange)="onSlideChange()"
+        class="swiper"
+      >
+        @for (item of items(); track item.text; let i = $index) {
+          <swiper-slide class="swiper-slide">
+            <div
+              [ngClass]="{ notice: hasNotice(item, feeds()) }"
+              (click)="slideTo(i)"
+              (keyup.enter)="slideTo(i)"
+              class="ion-activatable ripple-parent"
+            >
+              <h6 class="day-short">{{ item.day.short }}</h6>
+              <h5 class="day-num">{{ item.day.num }}</h5>
+              <ion-ripple-effect></ion-ripple-effect>
+            </div>
+          </swiper-slide>
+        }
+      </swiper-container>
+      <ion-button fill="clear" color="dark" class="end action-btn" (click)="slideNext()">
+        <ion-icon slot="icon-only" name="arrow-forward"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" color="dark" class="start action-btn" (click)="slidePrev()">
+        <ion-icon slot="icon-only" name="arrow-back"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+  @if (selected(); as selectedItem) {
+    <app-card-detail [item]="selectedItem"></app-card-detail>
+  }
+</div>

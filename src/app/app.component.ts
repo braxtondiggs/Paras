@@ -1,4 +1,4 @@
-import { Component, EnvironmentInjector, inject } from '@angular/core';
+import { Component, EnvironmentInjector, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { Analytics, setUserProperties } from '@angular/fire/analytics';
@@ -12,19 +12,24 @@ import { filter, map } from 'rxjs/operators';
   imports: [IonApp, IonRouterOutlet],
   selector: 'app-root',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['app.component.scss'],
   templateUrl: './app.component.html'
 })
-export class AppComponent {
-  private analytics: Analytics = inject(Analytics);
+export class AppComponent implements OnInit {
+  private readonly analytics = inject(Analytics);
+  private readonly alert = inject(AlertController);
+  private readonly platform = inject(Platform);
+  private readonly router = inject(Router);
+  private readonly title = inject(Title);
+  public readonly environmentInjector = inject(EnvironmentInjector);
 
-  constructor(
-    private alert: AlertController,
-    private platform: Platform,
-    public environmentInjector: EnvironmentInjector,
-    private router: Router,
-    private title: Title
-  ) {
+  // Signals for reactive state
+  readonly isDarkMode = signal(false);
+  readonly isNetworkConnected = signal(true);
+  readonly isAppReady = signal(false);
+
+  ngOnInit() {
     this.migrateData();
     this.initializeApp();
     this.setTheme();
@@ -33,8 +38,14 @@ export class AppComponent {
 
   private async initializeApp() {
     await this.platform.ready();
+    this.isAppReady.set(true);
+
     if (!this.platform.is('cordova')) return;
-    if (!await Network.getStatus()) await this.showNetworkAlert();
+
+    const networkStatus = await Network.getStatus();
+    this.isNetworkConnected.set(networkStatus.connected);
+    if (!networkStatus.connected) await this.showNetworkAlert();
+
     if (!this.platform.is('ios')) this.getFCMNotification();
   }
 
@@ -47,7 +58,7 @@ export class AppComponent {
       await Preferences.set({ key: 'token', value: token.value });
     });
 
-    PushNotifications.addListener('registrationError', async (error: any) => {
+    PushNotifications.addListener('registrationError', async (error: unknown) => {
       const alert = await this.alert.create({
         header: 'ASP For NYC',
         message: 'Notification token registration failed, you may not be able to receive push notifications or alerts!',
@@ -57,7 +68,7 @@ export class AppComponent {
             role: 'cancel',
             handler: async () => {
               await Preferences.set({ key: 'tokenFailure', value: 'true' });
-              await Preferences.set({ key: 'tokenFailureError', value: error.toString() });
+              await Preferences.set({ key: 'tokenFailureError', value: String(error) });
             }
           }
         ]
@@ -70,14 +81,21 @@ export class AppComponent {
   private async setTheme() {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
     const { value } = await Preferences.get({ key: 'darkMode' });
-    const darkMode = (value === 'true');
+    const darkMode = value === 'true';
+
+    this.isDarkMode.set(darkMode);
+
     if (darkMode) await Preferences.set({ key: 'darkMode', value: prefersDark.matches.toString() });
     this.toggleDarkTheme(darkMode);
     setUserProperties(this.analytics, { darkMode: darkMode.toString() });
-    prefersDark.addEventListener('change', (mediaQuery) => this.toggleDarkTheme(mediaQuery.matches));
+    prefersDark.addEventListener('change', mediaQuery => {
+      this.isDarkMode.set(mediaQuery.matches);
+      this.toggleDarkTheme(mediaQuery.matches);
+    });
   }
 
   private async toggleDarkTheme(shouldAdd: boolean) {
+    this.isDarkMode.set(shouldAdd);
     document.body.classList.toggle('dark', shouldAdd);
     await Preferences.set({ key: 'darkMode', value: shouldAdd.toString() });
   }
@@ -94,23 +112,33 @@ export class AppComponent {
 
   private async migrateData() {
     const darkMode = localStorage.getItem('darkMode');
-    if (localStorage.getItem('intro')) { await Preferences.set({ key: 'intro', value: 'true' }); localStorage.removeItem('intro'); }
-    if (darkMode) { await Preferences.set({ key: 'darkMode', value: darkMode }); localStorage.removeItem('darkMode'); }
+    if (localStorage.getItem('intro')) {
+      await Preferences.set({ key: 'intro', value: 'true' });
+      localStorage.removeItem('intro');
+    }
+    if (darkMode) {
+      await Preferences.set({ key: 'darkMode', value: darkMode });
+      localStorage.removeItem('darkMode');
+    }
   }
 
   private watchTitle() {
-    this.router.events.pipe(filter((event) => event instanceof NavigationEnd),
-      map(() => {
-        let route: ActivatedRoute = this.router.routerState.root;
-        let routeTitle = '';
-        while (route!.firstChild) {
-          route = route.firstChild;
-        }
-        if (route.snapshot.data['title']) {
-          routeTitle = route!.snapshot.data['title'];
-        }
-        return routeTitle;
-      })).subscribe((title: string) => {
+    this.router.events
+      .pipe(
+        filter(event => event instanceof NavigationEnd),
+        map(() => {
+          let route: ActivatedRoute = this.router.routerState.root;
+          let routeTitle = '';
+          while (route?.firstChild) {
+            route = route.firstChild;
+          }
+          if (route?.snapshot.data?.['title']) {
+            routeTitle = route.snapshot.data['title'];
+          }
+          return routeTitle;
+        })
+      )
+      .subscribe((title: string) => {
         if (title) this.title.setTitle(title);
       });
   }

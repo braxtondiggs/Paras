@@ -1,30 +1,24 @@
-import { Routes } from '@angular/router';
-import { AuthGuard, IntroGuard } from './core/guards';
+import type { Routes } from '@angular/router';
+import { authGuard } from '@shared/guards/auth.guard';
+import { introGuard } from '@shared/guards/intro.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   {
     path: 'intro',
-    data: { title: 'Intro' },
-    loadComponent: () => import('./intro/intro.page').then(m => m.IntroPage)
+    data: { title: 'Welcome' },
+    loadComponent: () => import('@features/onboarding/intro/intro.page').then(m => m.IntroPage)
   },
   {
     path: 'home',
-    data: { title: 'Home' },
-    loadComponent: () => import('./home/home.page').then(m => m.HomePage),
-    canActivate: [AuthGuard, IntroGuard],
-    children: [
-      {
-        path: 'calendar',
-        data: { title: 'Calender' },
-        loadComponent: () => import('./home/home.page').then(m => m.HomePage),
-      }
-    ]
+    data: { title: 'ASP For NYC' },
+    loadComponent: () => import('@features/parking/home/home.page').then(m => m.HomePage),
+    canActivate: [authGuard, introGuard]
   },
   {
     path: 'settings',
     data: { title: 'Settings' },
-    loadComponent: () => import('./settings/settings.page').then(m => m.SettingsPage),
-    canActivate: [AuthGuard]
+    loadComponent: () => import('@features/settings/settings/settings.page').then(m => m.SettingsPage),
+    canActivate: [authGuard]
   }
 ];

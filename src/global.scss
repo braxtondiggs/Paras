@@ -10,27 +10,27 @@
  */
 
 /* Core CSS required for Ionic components to work properly */
-@import '~@ionic/angular/css/core.css';
+@import "~@ionic/angular/css/core.css";
 
 /* Basic CSS for apps built with Ionic */
-@import '~@ionic/angular/css/normalize.css';
-@import '~@ionic/angular/css/structure.css';
-@import '~@ionic/angular/css/typography.css';
-@import '~@ionic/angular/css/display.css';
+@import "~@ionic/angular/css/normalize.css";
+@import "~@ionic/angular/css/structure.css";
+@import "~@ionic/angular/css/typography.css";
+@import "~@ionic/angular/css/display.css";
 
 /* Optional CSS utils that can be commented out */
-@import '~@ionic/angular/css/padding.css';
-@import '~@ionic/angular/css/float-elements.css';
-@import '~@ionic/angular/css/text-alignment.css';
-@import '~@ionic/angular/css/text-transformation.css';
-@import '~@ionic/angular/css/flex-utils.css';
-@import 'swiper/css';
+@import "~@ionic/angular/css/padding.css";
+@import "~@ionic/angular/css/float-elements.css";
+@import "~@ionic/angular/css/text-alignment.css";
+@import "~@ionic/angular/css/text-transformation.css";
+@import "~@ionic/angular/css/flex-utils.css";
+@import "swiper/css";
 
 ion-datetime::part(calendar-day) {
   width: 34px;
   height: 34px;
   min-width: 34px;
-  font-size: 0.75rem
+  font-size: 0.75rem;
 }
 
 ion-datetime::part(calendar-day active) {
@@ -53,7 +53,6 @@ ion-datetime::part(month-year-button) {
     z-index: 1;
   }
 }
-
 
 ion-select.ion-valid {
   --highlight-color: var(--ion-color-primary);
