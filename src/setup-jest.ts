@@ -1,5 +1,6 @@
-import 'jest-preset-angular/setup-jest';
-import './polyfills';
+import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
+
+setupZoneTestEnv();
 
 // Import Spectator matchers
 // Spectator Jest integration
@@ -15,8 +16,8 @@ Object.defineProperty(window, 'matchMedia', {
     removeListener: jest.fn(), // deprecated
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
+    dispatchEvent: jest.fn()
+  }))
 });
 
 // Mock IntersectionObserver
@@ -25,8 +26,8 @@ Object.defineProperty(window, 'IntersectionObserver', {
   value: jest.fn().mockImplementation(() => ({
     disconnect: jest.fn(),
     observe: jest.fn(),
-    unobserve: jest.fn(),
-  })),
+    unobserve: jest.fn()
+  }))
 });
 
 // Mock ResizeObserver
@@ -35,8 +36,8 @@ Object.defineProperty(window, 'ResizeObserver', {
   value: jest.fn().mockImplementation(() => ({
     disconnect: jest.fn(),
     observe: jest.fn(),
-    unobserve: jest.fn(),
-  })),
+    unobserve: jest.fn()
+  }))
 });
 
 // Mock Ionic/Capacitor globals
@@ -45,14 +46,16 @@ Object.defineProperty(window, 'Capacitor', {
   value: {
     getPlatform: () => 'web',
     isNativePlatform: () => false,
-    convertFileSrc: (path: string) => path,
-  },
+    convertFileSrc: (path: string) => path
+  }
 });
 
-// Mock CSS.supports for Ionic components
-Object.defineProperty(CSS, 'supports', {
+// Mock CSS object and CSS.supports for Ionic components
+Object.defineProperty(globalThis, 'CSS', {
   writable: true,
-  value: jest.fn().mockImplementation(() => false),
+  value: {
+    supports: jest.fn().mockImplementation(() => false)
+  }
 });
 
 // Global test utilities and configurations
@@ -67,7 +70,7 @@ console.warn = (...args: any[]) => {
   if (
     typeof args[0] === 'string' &&
     (args[0].includes('Angular is running in development mode') ||
-     args[0].includes('Multiple tabs open, persistence can only be enabled in one tab'))
+      args[0].includes('Multiple tabs open, persistence can only be enabled in one tab'))
   ) {
     return;
   }

@@ -1,7 +1,16 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "baseUrl": "./",
+    "baseUrl": "./src",
+    "paths": {
+      "@app/*": ["app/*"],
+      "@shared/*": ["app/shared/*"],
+      "@features/*": ["app/features/*"],
+      "@data/*": ["app/data/*"],
+      "@layout/*": ["app/layout/*"],
+      "@environments/*": ["environments/*"],
+      "@assets/*": ["assets/*"]
+    },
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

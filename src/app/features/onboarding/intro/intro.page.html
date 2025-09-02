@@ -1,14 +1,14 @@
-<ion-content class="ion-padding" fullscreen>
+<ion-content>
   <div class="intro-container">
     <!-- Header Section -->
     <div class="intro-header">
       <div class="logo-container">
         <img class="intro-logo" src="/assets/intro.png" alt="ASP NYC Logo" />
       </div>
-      
       <div class="intro-title">
-        <ion-text color="primary">
-          <h1>Welcome to ASP NYC</h1>
+        <h1>ASP NYC</h1>
+        <ion-text color="light">
+          <p>Never pay another parking ticket due to NYC street cleaning schedules</p>
         </ion-text>
       </div>
     </div>
@@ -18,33 +18,41 @@
       <div class="feature-card">
         <ion-icon name="calendar-outline" color="primary"></ion-icon>
         <ion-text>
-          <h3>Track Suspensions</h3>
-          <p>Stay updated on alternate side parking suspensions in NYC</p>
+          <h3>Smart Calendar</h3>
+          <p>View parking rules in calendar or list format with highlighted restriction days</p>
         </ion-text>
       </div>
-      
+
       <div class="feature-card">
-        <ion-icon name="time-outline" color="primary"></ion-icon>
+        <ion-icon name="notifications-outline" color="secondary"></ion-icon>
         <ion-text>
-          <h3>Meter Status</h3>
-          <p>Check parking meter status and hours in real-time</p>
+          <h3>Custom Alerts</h3>
+          <p>Get personalized notifications for today's rules and next-day reminders</p>
         </ion-text>
       </div>
-      
+
       <div class="feature-card">
-        <ion-icon name="notifications-outline" color="primary"></ion-icon>
+        <ion-icon name="time-outline" color="tertiary"></ion-icon>
         <ion-text>
-          <h3>Smart Alerts</h3>
-          <p>Get notified about important parking updates</p>
+          <h3>Real-time Updates</h3>
+          <p>Stay informed about parking suspensions and rule changes as they happen</p>
+        </ion-text>
+      </div>
+
+      <div class="feature-card">
+        <ion-icon name="moon-outline" color="dark"></ion-icon>
+        <ion-text>
+          <h3>Dark Mode</h3>
+          <p>Switch between light and dark themes for comfortable viewing anytime</p>
         </ion-text>
       </div>
     </div>
 
-    <!-- Call to Action -->
+    <!-- Actions Section -->
     <div class="intro-actions">
       <ion-button 
         expand="block" 
-        size="large"
+        size="large" 
         color="light" 
         class="get-started-btn"
         (click)="continue()">

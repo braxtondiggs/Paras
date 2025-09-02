@@ -14,51 +14,45 @@ export function configureTestBed(config: any = {}) {
       // Firebase mocks
       { provide: 'AuthService', useClass: MockAuthService },
       { provide: 'FeedService', useClass: MockFeedService },
-      
+
       // Ionic mocks
       { provide: 'AlertController', useClass: MockAlertController },
       { provide: 'LoadingController', useClass: MockLoadingController },
       { provide: 'ModalController', useClass: MockModalController },
       { provide: 'Platform', useClass: MockPlatform },
-      
+
       // Add any additional providers
-      ...(config.providers || []),
+      ...(config.providers || [])
     ],
     declarations: config.declarations || [],
-    schemas: config.schemas || [],
+    schemas: config.schemas || []
   });
 }
 
 /**
  * Common setup for component testing
  */
-export async function setupComponentTest<T>(
-  component: new (...args: any[]) => T,
-  config: any = {}
-) {
+export async function setupComponentTest<T>(component: new (...args: any[]) => T, config: any = {}) {
   await configureTestBed({
     declarations: [component],
-    ...config,
+    ...config
   }).compileComponents();
 
   const fixture = TestBed.createComponent(component);
   const instance = fixture.componentInstance;
-  
+
   return {
     fixture,
     component: instance,
     element: fixture.nativeElement as HTMLElement,
-    detectChanges: () => fixture.detectChanges(),
+    detectChanges: () => fixture.detectChanges()
   };
 }
 
 /**
  * Common setup for service testing
  */
-export function setupServiceTest<T>(
-  service: new (...args: any[]) => T,
-  config: any = {}
-) {
+export function setupServiceTest<T>(service: new (...args: any[]) => T, config: any = {}) {
   configureTestBed(config);
   return TestBed.inject(service);
 }
