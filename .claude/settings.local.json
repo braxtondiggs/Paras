@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(npm update:*)",
+      "Bash(npm install:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(npm outdated)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm info:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,10 +1,12 @@
+@use "sass:color";
+
 $alert: #f38181;
 $secondary-color: #f67280;
 $card-background: #f6f6f6;
 $card-border: #dbe2ef;
 $card-active-background: #dbe2ef;
 $text-color: #393e46;
-$main-color: darken($card-border, 30%);
+$main-color: color.adjust($card-border, $lightness: -30%);
 
 .horizontal-container {
   margin-top: 16px;

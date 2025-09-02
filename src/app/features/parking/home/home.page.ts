@@ -7,13 +7,15 @@ import {
   inject,
   ChangeDetectionStrategy,
   signal,
-  computed
+  computed,
+  DestroyRef
 } from '@angular/core';
 import { ModalDetailComponent } from '@shared/components/modal-detail/modal-detail.component';
 import { Feed } from '@shared/interfaces';
 import { FeedService } from '@data/services';
 import dayjs, { Dayjs } from 'dayjs';
 import { lastValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { addIcons } from 'ionicons';
 import { calendarOutline, settingsOutline } from 'ionicons/icons';
 import {
@@ -57,14 +59,21 @@ export class HomePage implements AfterViewInit {
   private readonly feed = inject(FeedService);
   private readonly modal = inject(ModalController);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly selectedDate = signal(dayjs().startOf('day').toISOString());
   readonly items = signal<Feed[]>([]);
-  readonly highlightedDates = signal<unknown[]>([]);
   readonly activeSlide = signal(0);
   readonly maxDate = signal(dayjs().endOf('year').toISOString());
 
   readonly minDate = computed(() => dayjs().startOf('year').toISOString());
+  readonly highlightedDates = computed(() =>
+    this.items().map(o => ({
+      date: dayjs(o.date.toDate()).format('YYYY-MM-DD'),
+      backgroundColor: '#f38181',
+      textColor: '#fff'
+    }))
+  );
 
   @ViewChild('swiper', { static: false }) swiper?: ElementRef | undefined;
   @ViewChild('calendar', { read: ElementRef, static: false }) calendar?: ElementRef;
@@ -102,16 +111,12 @@ export class HomePage implements AfterViewInit {
   }
 
   private getData(start: Dayjs, end: Dayjs) {
-    this.feed.get(start, end).subscribe(items => {
-      this.items.set(items);
-      this.highlightedDates.set(
-        items.map(o => ({
-          date: dayjs(o.date.toDate()).format('YYYY-MM-DD'),
-          backgroundColor: '#f38181',
-          textColor: '#fff'
-        }))
-      );
-    });
+    this.feed
+      .getCachedFeeds(start, end) // Use cached version for better performance
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(items => {
+        this.items.set(items);
+      });
   }
 
   private async getLastDate() {

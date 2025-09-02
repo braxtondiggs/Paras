@@ -91,3 +91,14 @@ $RECYCLE.BIN/
 /release.keystore
 /ASP.apk
 /.angular/cache
+
+# Jest
+coverage/
+.jest-cache/
+test-results/
+*.lcov
+
+# Test files
+__tests__/
+*.spec.js
+*.test.js
