@@ -6,7 +6,7 @@ export class MockAlertController {
   create = jest.fn().mockResolvedValue({
     present: jest.fn().mockResolvedValue(undefined),
     dismiss: jest.fn().mockResolvedValue(undefined),
-    onDidDismiss: jest.fn().mockResolvedValue({ role: null }),
+    onDidDismiss: jest.fn().mockResolvedValue({ role: null })
   });
 }
 
@@ -14,7 +14,7 @@ export class MockAlertController {
 export class MockLoadingController {
   create = jest.fn().mockResolvedValue({
     present: jest.fn().mockResolvedValue(undefined),
-    dismiss: jest.fn().mockResolvedValue(undefined),
+    dismiss: jest.fn().mockResolvedValue(undefined)
   });
 }
 
@@ -23,7 +23,7 @@ export class MockModalController {
   create = jest.fn().mockResolvedValue({
     present: jest.fn().mockResolvedValue(undefined),
     dismiss: jest.fn().mockResolvedValue(undefined),
-    onDidDismiss: jest.fn().mockResolvedValue({ data: null, role: null }),
+    onDidDismiss: jest.fn().mockResolvedValue({ data: null, role: null })
   });
 }
 
@@ -31,7 +31,7 @@ export class MockModalController {
 export class MockToastController {
   create = jest.fn().mockResolvedValue({
     present: jest.fn().mockResolvedValue(undefined),
-    dismiss: jest.fn().mockResolvedValue(undefined),
+    dismiss: jest.fn().mockResolvedValue(undefined)
   });
 }
 
@@ -53,32 +53,32 @@ export const capacitorMocks = {
       set: jest.fn().mockResolvedValue(undefined),
       remove: jest.fn().mockResolvedValue(undefined),
       clear: jest.fn().mockResolvedValue(undefined),
-      keys: jest.fn().mockResolvedValue({ keys: [] }),
-    },
+      keys: jest.fn().mockResolvedValue({ keys: [] })
+    }
   },
   '@capacitor/network': {
     Network: {
       getStatus: jest.fn().mockResolvedValue({
         connected: true,
-        connectionType: 'wifi',
+        connectionType: 'wifi'
       }),
-      addListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
-    },
+      addListener: jest.fn().mockReturnValue({ remove: jest.fn() })
+    }
   },
   '@capacitor/push-notifications': {
     PushNotifications: {
       requestPermissions: jest.fn().mockResolvedValue({ receive: 'granted' }),
       register: jest.fn().mockResolvedValue(undefined),
-      addListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
-    },
+      addListener: jest.fn().mockReturnValue({ remove: jest.fn() })
+    }
   },
   '@capacitor/haptics': {
     Haptics: {
       impact: jest.fn().mockResolvedValue(undefined),
       notification: jest.fn().mockResolvedValue(undefined),
-      vibrate: jest.fn().mockResolvedValue(undefined),
-    },
-  },
+      vibrate: jest.fn().mockResolvedValue(undefined)
+    }
+  }
 };
 
 // Ionic module mocks
@@ -96,6 +96,6 @@ export const ionicMocks = {
     IonToolbar: jest.fn(),
     IonButton: jest.fn(),
     IonIcon: jest.fn(),
-    IonRouterOutlet: jest.fn(),
-  },
+    IonRouterOutlet: jest.fn()
+  }
 };

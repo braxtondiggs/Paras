@@ -22,7 +22,8 @@ export default {
     '^@shared/(.*)$': '<rootDir>/src/app/shared/$1',
     '^@features/(.*)$': '<rootDir>/src/app/features/$1',
     '^@data/(.*)$': '<rootDir>/src/app/data/$1',
-    '^@environments/(.*)$': '<rootDir>/src/environments/$1'
+    '^@environments/(.*)$': '<rootDir>/src/environments/$1',
+    'ionicons/components/ion-icon.js': '@ionic/core/components/ion-icon.js'
   },
   
   // Test environment
@@ -45,6 +46,11 @@ export default {
     '<rootDir>/e2e/'
   ],
   
+  // Transform certain node_modules to handle ESM
+  transformIgnorePatterns: [
+    'node_modules/(?!(@ionic|@stencil|ionicons|@angular|@capacitor|@ngneat)/)'
+  ],
+  
   // Module paths to ignore
   modulePathIgnorePatterns: [
     '<rootDir>/dist/',
@@ -56,6 +62,7 @@ export default {
   collectCoverageFrom: [
     'src/app/**/*.ts',
     '!src/app/**/*.spec.ts',
+    '!src/app/**/*.test.ts',
     '!src/app/**/*.mock.ts',
     '!src/app/**/index.ts',
     '!src/app/**/*.module.ts',
@@ -69,13 +76,14 @@ export default {
   coverageReporters: [
     'html',
     'text-summary',
+    'text',
     'lcov',
     'clover'
   ],
   coverageThreshold: {
     global: {
       branches: 70,
-      functions: 70,
+      functions: 70, 
       lines: 70,
       statements: 70
     }

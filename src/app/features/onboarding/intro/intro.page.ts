@@ -1,9 +1,9 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Preferences } from '@capacitor/preferences';
+import { IonButton, IonContent, IonIcon, IonText } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { calendarOutline, timeOutline, notificationsOutline, arrowForward } from 'ionicons/icons';
-import { IonContent, IonText, IonButton, IonIcon } from '@ionic/angular/standalone';
+import { arrowForward, calendarOutline, moonOutline, notificationsOutline, timeOutline } from 'ionicons/icons';
 
 @Component({
   imports: [IonContent, IonText, IonButton, IonIcon],
@@ -17,11 +17,16 @@ export class IntroPage {
   private readonly router = inject(Router);
 
   constructor() {
-    addIcons({ calendarOutline, timeOutline, notificationsOutline, arrowForward });
+    addIcons({ calendarOutline, timeOutline, notificationsOutline, arrowForward, moonOutline });
   }
 
   async continue() {
-    await Preferences.set({ key: 'intro', value: 'true' });
-    this.router.navigate(['/']);
+    try {
+      await Preferences.set({ key: 'intro', value: 'true' });
+    } catch (error) {
+      console.warn('Failed to save intro preference:', error);
+    } finally {
+      this.router.navigate(['/']);
+    }
   }
 }

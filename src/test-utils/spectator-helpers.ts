@@ -1,12 +1,12 @@
-import { Type } from '@angular/core';
+import type { Type } from '@angular/core';
 import { createComponentFactory, createServiceFactory, SpectatorService } from '@ngneat/spectator/jest';
 import { MockAuthService, MockFeedService } from './firebase-mocks';
-import { 
-  MockAlertController, 
-  MockLoadingController, 
-  MockModalController, 
-  MockToastController, 
-  MockPlatform 
+import {
+  MockAlertController,
+  MockLoadingController,
+  MockModalController,
+  MockToastController,
+  MockPlatform
 } from './ionic-mocks';
 
 // Common providers for tests
@@ -17,16 +17,13 @@ export const commonProviders = [
   { provide: 'LoadingController', useClass: MockLoadingController },
   { provide: 'ModalController', useClass: MockModalController },
   { provide: 'ToastController', useClass: MockToastController },
-  { provide: 'Platform', useClass: MockPlatform },
+  { provide: 'Platform', useClass: MockPlatform }
 ];
 
 /**
  * Helper function to create a component factory with common Ionic/Firebase mocks
  */
-export function createIonicComponentFactory<T>(
-  component: Type<T>,
-  config: any = {}
-) {
+export function createIonicComponentFactory<T>(component: Type<T>, config: any = {}) {
   return createComponentFactory({
     component,
     imports: [
@@ -51,19 +48,11 @@ export function createIonicComponentFactory<T>(
 /**
  * Helper function to create a service factory with common mocks
  */
-export function createIonicServiceFactory<T>(
-  service: Type<T>,
-  config: any = {}
-) {
+export function createIonicServiceFactory<T>(service: Type<T>, config: any = {}) {
   return createServiceFactory({
     service,
-    providers: [
-      ...commonProviders,
-      ...(config.providers || [])
-    ],
-    mocks: [
-      ...(config.mocks || [])
-    ],
+    providers: [...commonProviders, ...(config.providers || [])],
+    mocks: [...(config.mocks || [])],
     ...config
   });
 }
@@ -98,13 +87,13 @@ export const testUtils = {
   mockConsole: () => ({
     log: jest.spyOn(console, 'log').mockImplementation(),
     warn: jest.spyOn(console, 'warn').mockImplementation(),
-    error: jest.spyOn(console, 'error').mockImplementation(),
+    error: jest.spyOn(console, 'error').mockImplementation()
   }),
 
   // Restore console methods
   restoreConsole(mocks: { log: jest.SpyInstance; warn: jest.SpyInstance; error: jest.SpyInstance }) {
-    Object.values(mocks).forEach((mock) => mock.mockRestore());
-  },
+    Object.values(mocks).forEach(mock => mock.mockRestore());
+  }
 };
 
 // Note: Spectator provides its own comprehensive Jest matchers
