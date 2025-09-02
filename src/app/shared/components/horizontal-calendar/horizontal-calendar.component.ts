@@ -6,7 +6,9 @@ import {
   ElementRef,
   inject,
   ChangeDetectionStrategy,
-  signal
+  signal,
+  computed,
+  DestroyRef
 } from '@angular/core';
 import { Calendar, Feed } from '@shared/interfaces';
 import { FeedService } from '@data/services';
@@ -15,6 +17,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import { NgClass } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { addIcons } from 'ionicons';
 import { arrowBack, arrowForward } from 'ionicons/icons';
@@ -35,13 +38,22 @@ export class HorizontalCalendarComponent implements OnInit {
 
   private readonly feed = inject(FeedService);
   private readonly loadingCtl = inject(LoadingController);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly isLoading = signal(true);
   readonly selected = signal<Feed | Dayjs | undefined>(undefined);
   readonly feeds = signal<Feed[] | undefined>(undefined);
   readonly active = signal<Calendar | undefined>(undefined);
   readonly items = signal<Calendar[]>([]);
-  loading: any;
+
+  readonly dateRange = computed(() => {
+    const items = this.items();
+    const start = items[0];
+    const end = items[items.length - 1];
+    return start && end ? { start: dayjs(start.date), end: dayjs(end.date) } : null;
+  });
+
+  loading?: any;
 
   constructor() {
     addIcons({ arrowBack, arrowForward });
@@ -129,18 +141,27 @@ export class HorizontalCalendarComponent implements OnInit {
 
   private getData() {
     const active = this.active();
-    const items = this.items();
-    const start = items[0];
-    const end = items[items.length - 1];
-    if (!start || !end || !active) return;
-    this.feed.get(dayjs(start.date), dayjs(end.date)).subscribe(feed => {
-      this.selected.set(this.getSelectedItem(active, feed) ?? dayjs(active.date));
-      this.feeds.set(feed);
-      setTimeout(() => {
-        this.isLoading.set(false);
-        this.loading.dismiss();
-      }, 250);
-    });
+    const dateRange = this.dateRange();
+    if (!dateRange || !active) return;
+
+    this.feed
+      .getCachedFeeds(dateRange.start, dateRange.end) // Use cached version
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: feed => {
+          this.selected.set(this.getSelectedItem(active, feed) ?? dayjs(active.date));
+          this.feeds.set(feed);
+          setTimeout(() => {
+            this.isLoading.set(false);
+            this.loading?.dismiss();
+          }, 250);
+        },
+        error: error => {
+          console.error('Failed to load calendar data:', error);
+          this.isLoading.set(false);
+          this.loading?.dismiss();
+        }
+      });
   }
 
   private getCalenderFormat(date: Dayjs): Calendar {

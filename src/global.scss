@@ -9,6 +9,8 @@
  * https://ionicframework.com/docs/layout/global-stylesheets
  */
 
+@use "swiper/css";
+
 /* Core CSS required for Ionic components to work properly */
 @import "~@ionic/angular/css/core.css";
 
@@ -24,7 +26,6 @@
 @import "~@ionic/angular/css/text-alignment.css";
 @import "~@ionic/angular/css/text-transformation.css";
 @import "~@ionic/angular/css/flex-utils.css";
-@import "swiper/css";
 
 ion-datetime::part(calendar-day) {
   width: 34px;
@@ -91,4 +92,48 @@ ion-modal.fullscreen {
   --width: 100%;
   --height: 100%;
   --border-radius: 0;
+}
+
+/* Modern utility classes */
+.ion-margin-auto {
+  margin: auto !important;
+}
+
+.ion-border-radius {
+  border-radius: var(--ion-border-radius) !important;
+}
+
+.ion-shadow {
+  box-shadow: var(--ion-box-shadow) !important;
+}
+
+/* Improved animations */
+.ion-animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced focus styles */
+ion-button:focus {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 2px;
+}
+
+/* Safe area aware padding */
+.safe-area-top {
+  padding-top: var(--ion-safe-area-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--ion-safe-area-bottom);
 }
