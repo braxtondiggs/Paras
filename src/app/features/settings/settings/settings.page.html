@@ -1,55 +1,61 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Settings</ion-title>
     <ion-buttons slot="start">
-      <ion-back-button></ion-back-button>
+      <ion-back-button defaultHref="/home"></ion-back-button>
     </ion-buttons>
+    <ion-title>Settings</ion-title>
   </ion-toolbar>
 </ion-header>
-<ion-content fullscreen>
+
+<ion-content [fullscreen]="true">
   @if (!isLoading()) {
     <form [formGroup]="settingsForm()">
       @if (!isiOS()) {
-        <ion-list lines="none">
+        <ion-list-header>
+          <ion-label>Notification Preferences</ion-label>
+        </ion-list-header>
+
+        <ion-list lines="none" [inset]="true">
           <ion-item>
             <ion-select
               formControlName="today"
               label="Current Day Notification"
               interface="popover"
               aria-label="Current Day Notification"
+              placeholder="Select notification timing"
+              [helperText]="getNotificationMessage('today', settingsForm().value.today)"
             >
               <ion-select-option value="none">None</ion-select-option>
               <ion-select-option value="immediately">Immediately</ion-select-option>
               <ion-select-option value="custom">Custom</ion-select-option>
             </ion-select>
-            <ion-note>
-              {{ getNotificationMessage('today', settingsForm().value.today) }}
-            </ion-note>
           </ion-item>
+
           <ion-item>
             <ion-select
               formControlName="nextDay"
               label="Next Day Notification"
               interface="popover"
               aria-label="Next Day Notification"
+              placeholder="Select notification timing"
+              [helperText]="getNotificationMessage('nextday', settingsForm().value.nextDay)"
             >
               <ion-select-option value="none">None</ion-select-option>
               <ion-select-option value="immediately">Immediately</ion-select-option>
               <ion-select-option value="custom">Custom</ion-select-option>
             </ion-select>
-            <ion-note>
-              {{ getNotificationMessage('nextday', settingsForm().value.nextDay) }}
-            </ion-note>
           </ion-item>
         </ion-list>
-        <ion-list lines="none">
+
+        <ion-list [inset]="true">
           <ion-item>
             <ion-checkbox
               formControlName="exceptionOnly"
               (ionChange)="onCheckBoxChange($event, 'exceptionOnly')"
               aria-label="Exception Notifications Only"
+              justify="space-between"
             >
-              Exception Notifications Only:
+              Exception Notifications Only
             </ion-checkbox>
           </ion-item>
           <ion-item>
@@ -57,38 +63,53 @@
               formControlName="weekend"
               (ionChange)="onCheckBoxChange($event, 'weekend')"
               aria-label="Weekend Notifications"
+              justify="space-between"
             >
-              Weekend Notifications:
+              Weekend Notifications
             </ion-checkbox>
           </ion-item>
         </ion-list>
       }
-      <br />
-      <ion-list lines="none">
-        <ion-item-group>
-          <ion-list-header>
-            <ion-label color="primary">Other</ion-label>
-          </ion-list-header>
-          <ion-item>
-            <ion-toggle formControlName="darkMode" aria-label="Dark Mode">Dark Mode</ion-toggle>
-            <ion-icon name="moon" slot="start"></ion-icon>
+
+      <ion-list-header>
+        <ion-label>General</ion-label>
+      </ion-list-header>
+
+      <ion-list [inset]="true">
+        <ion-item>
+          <ion-icon name="moon" slot="start" color="medium"></ion-icon>
+          <ion-toggle formControlName="darkMode" aria-label="Dark Mode" justify="space-between"> Dark Mode </ion-toggle>
+        </ion-item>
+      </ion-list>
+
+      <ion-list-header>
+        <ion-label>About</ion-label>
+      </ion-list-header>
+
+      <ion-list [inset]="true">
+        <ion-item button (click)="about()">
+          <ion-icon name="information-circle" slot="start" color="medium"></ion-icon>
+          <ion-label>About this App</ion-label>
+        </ion-item>
+
+        <ion-item button (click)="rate()" detail>
+          <ion-icon name="thumbs-up" slot="start" color="medium"></ion-icon>
+          <ion-label>Rate Us On The App Store</ion-label>
+        </ion-item>
+
+        @if (!isiOS()) {
+          <ion-item button (click)="donate()">
+            <ion-icon name="heart" slot="start" color="medium"></ion-icon>
+            <ion-label>Support Development</ion-label>
           </ion-item>
-          <ion-item (click)="about()">
-            <ion-label> About this App </ion-label>
-            <ion-icon name="information-circle" slot="start"></ion-icon>
-          </ion-item>
-          <ion-item (click)="rate()" detail>
-            <ion-label> Rate Us On The App Store </ion-label>
-            <ion-icon name="thumbs-up" slot="start"></ion-icon>
-          </ion-item>
-          @if (!isiOS()) {
-            <ion-item (click)="donate()">
-              <ion-label> Support Development </ion-label>
-              <ion-icon name="heart" slot="start"></ion-icon>
-            </ion-item>
-          }
-        </ion-item-group>
+        }
       </ion-list>
     </form>
+  } @else {
+    <div class="loading-container ion-padding">
+      <ion-skeleton-text [animated]="true"></ion-skeleton-text>
+      <ion-skeleton-text [animated]="true"></ion-skeleton-text>
+      <ion-skeleton-text [animated]="true"></ion-skeleton-text>
+    </div>
   }
 </ion-content>

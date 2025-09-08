@@ -1,2 +1,0 @@
-// Export models
-export * from './';

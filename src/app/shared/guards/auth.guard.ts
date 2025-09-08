@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { AuthService } from '@data/services';
+import { AuthService } from '@core/services';
 
 export const authGuard = async (): Promise<boolean> => {
   const auth = inject(AuthService);

@@ -1,13 +1,15 @@
 # Development Guide - Paras (ASP NYC)
 
 ## Project Names
+
 - **Paras**: Project codename
-- **ASP NYC**: Short/public name  
+- **ASP NYC**: Short/public name
 - **Alternate side parking - New York City**: Full application name
 
 ## Development Environment Setup
 
 ### Prerequisites
+
 - **Node.js 20** (specified in package.json engines)
 - **npm** (comes with Node.js)
 - **iOS Development**: Xcode and iOS Simulator
@@ -16,6 +18,7 @@
 ### Initial Setup
 
 1. **Clone and install dependencies**:
+
    ```bash
    git clone <repository-url>
    cd Paras
@@ -25,7 +28,6 @@
 2. **Environment Configuration**:
    - Check `src/environments/environment.ts` for development settings
    - Check `src/environments/environment.prod.ts` for production settings
-   - Firebase configuration is handled by `FirebaseConfigService`
 
 3. **IDE Setup**:
    - **Recommended**: VS Code with Angular Language Service extension
@@ -64,6 +66,18 @@ npm run test:debug       # Debug mode with Node inspector
 npm run test:update      # Update Jest snapshots
 ```
 
+### Build Quality Checks
+
+Before committing or deploying, ensure all quality gates pass:
+
+```bash
+# Full quality check pipeline
+npm run lint:check && npm run format:check && npm run type-check && npm run test:ci && npm run build
+
+# Quick dev check
+npm run lint && npm run type-check && npm run test
+```
+
 ### Building and Deployment
 
 ```bash
@@ -84,40 +98,40 @@ npm run stats     # Analyze bundle size with webpack-bundle-analyzer
 ### Component Architecture
 
 **Standalone Components (Angular 20)**:
+
 ```typescript
 @Component({
   standalone: true,
   imports: [CommonModule, IonicModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
   // ...
 })
 export class ExampleComponent {
   // Use inject() for dependency injection
   private readonly service = inject(SomeService);
-  
+
   // Use signals for reactive state
   readonly data = signal<Data[]>([]);
   readonly isLoading = signal(false);
-  
+
   // Computed values
-  readonly filteredData = computed(() => 
-    this.data().filter(item => item.active)
-  );
+  readonly filteredData = computed(() => this.data().filter(item => item.active));
 }
 ```
 
 ### State Management with Signals
 
 **Reactive State**:
+
 ```typescript
 // Service with signal-based state
 @Injectable({ providedIn: 'root' })
 export class StateService {
   private readonly _items = signal<Item[]>([]);
-  
+
   readonly items = this._items.asReadonly();
   readonly itemCount = computed(() => this.items().length);
-  
+
   updateItems(items: Item[]) {
     this._items.set(items);
   }
@@ -126,7 +140,7 @@ export class StateService {
 // Component consumption
 export class Component {
   private readonly stateService = inject(StateService);
-  
+
   readonly items = this.stateService.items;
   readonly count = this.stateService.itemCount;
 }
@@ -135,13 +149,14 @@ export class Component {
 ### RxJS Integration
 
 **Reactive Data Flows**:
+
 ```typescript
 // Service with RxJS streams
 @Injectable()
 export class DataService {
   private readonly firestore = inject(Firestore);
   private readonly destroyRef = inject(DestroyRef);
-  
+
   getData(): Observable<Data[]> {
     return collectionData(collection(this.firestore, 'data')).pipe(
       catchError(error => {
@@ -167,23 +182,21 @@ ngOnInit() {
 ### Firestore Usage
 
 **Data Service Pattern**:
+
 ```typescript
 @Injectable()
 export class FeedService {
   private readonly firestore = inject(Firestore);
   private readonly feedCollection = collection(this.firestore, 'feed');
-  
+
   get(startDate: Date, endDate: Date): Observable<Feed[]> {
     const constraints = [
       where('date', '>=', Timestamp.fromDate(startDate)),
       where('date', '<', Timestamp.fromDate(endDate)),
       orderBy('date', 'desc')
     ];
-    
-    return collectionData(
-      query(this.feedCollection, ...constraints),
-      { idField: 'id' }
-    ).pipe(
+
+    return collectionData(query(this.feedCollection, ...constraints), { idField: 'id' }).pipe(
       traceUntilFirst('getFeed'), // Performance monitoring
       map(items => this.filterItems(items)),
       shareReplay(1)
@@ -195,6 +208,7 @@ export class FeedService {
 ### Performance Optimization
 
 **Caching and Offline Support**:
+
 ```typescript
 getCachedFeeds(start: Dayjs, end: Dayjs): Observable<Feed[]> {
   return this.get(start, end).pipe(
@@ -223,6 +237,7 @@ private async handleOfflineState(offline: boolean): Promise<void> {
 ### Capacitor Integration
 
 **Native Features**:
+
 ```typescript
 // Push notifications
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -245,6 +260,7 @@ async saveUserPreference(key: string, value: string) {
 ### Platform-Specific Code
 
 **Platform Detection**:
+
 ```typescript
 import { Platform } from '@ionic/angular/standalone';
 
@@ -266,16 +282,20 @@ describe('ExampleComponent', () => {
   let spectator: Spectator<ExampleComponent>;
   const createComponent = createComponentFactory({
     component: ExampleComponent,
-    imports: [/* required imports */],
-    providers: [/* mock providers */]
+    imports: [
+      /* required imports */
+    ],
+    providers: [
+      /* mock providers */
+    ]
   });
 
-  beforeEach(() => spectator = createComponent());
+  beforeEach(() => (spectator = createComponent()));
 
   it('should display data', () => {
     spectator.component.data.set([mockData]);
     spectator.detectChanges();
-    
+
     expect(spectator.query('.data-item')).toBeTruthy();
   });
 });
@@ -289,12 +309,10 @@ import { of } from 'rxjs';
 
 describe('DataService', () => {
   let service: DataService;
-  
+
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        { provide: Firestore, useValue: mockFirestore }
-      ]
+      providers: [{ provide: Firestore, useValue: mockFirestore }]
     });
     service = TestBed.inject(DataService);
   });
@@ -302,7 +320,7 @@ describe('DataService', () => {
   it('should fetch data', () => {
     const mockData = [{ id: 1, name: 'Test' }];
     jest.spyOn(service, 'getData').mockReturnValue(of(mockData));
-    
+
     service.getData().subscribe(data => {
       expect(data).toEqual(mockData);
     });

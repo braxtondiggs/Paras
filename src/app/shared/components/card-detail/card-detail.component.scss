@@ -1,28 +1,126 @@
-ion-card-header {
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  height: 32px;
-  justify-content: space-between;
-  padding: 0 16px;
+.parking-card {
+  margin: 0;
+  border-radius: 12px;
+  
+  &.status-active {
+    border-left: 4px solid var(--ion-color-danger);
+  }
 
-  ion-icon {
-    font-size: 22px;
+  &.status-inactive {
+    border-left: 4px solid var(--ion-color-success);
   }
 }
 
-ion-card-content {
-  padding: 0 8px 16px;
-  position: relative;
+.card-header {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  
+  .date-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
 
-  .updated {
-    bottom: 4px;
+    .date {
+      font-weight: 600;
+    }
+  }
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+
+  .status-text {
     font-size: 12px;
-    position: absolute;
-    right: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+}
+
+.card-content {
+  padding: 0;
+}
+
+.info-list {
+  .info-item {
+    --padding-start: 16px;
+    --padding-end: 16px;
+
+    .info-label {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .info-value {
+      margin: 0;
+      font-weight: 500;
+
+      &.text-success {
+        color: var(--ion-color-success);
+      }
+
+      &.text-danger {
+        color: var(--ion-color-danger);
+      }
+
+      &.text-warning {
+        color: var(--ion-color-warning);
+      }
+    }
   }
 
-  ion-item {
-    --min-height: 36px;
+  .reason-item {
+    background-color: var(--ion-color-warning-tint);
+    border-radius: 8px;
+    margin: 8px 16px;
+  }
+
+  .description-item {
+    background-color: var(--ion-color-light-tint);
+    border-radius: 8px;
+    margin: 8px 16px;
+  }
+}
+
+.updated-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+
+  .update-text {
+    font-size: 12px;
+    color: var(--ion-color-medium);
+    font-style: italic;
+  }
+}
+
+.empty-state {
+  margin: 0;
+  border: 2px dashed var(--ion-color-light-shade);
+
+  .empty-content {
+    text-align: center;
+    padding: 24px;
+
+    .empty-icon {
+      font-size: 48px;
+      color: var(--ion-color-medium);
+      margin-bottom: 16px;
+    }
+
+    .empty-text {
+      margin: 0;
+      color: var(--ion-color-medium);
+    }
   }
 }

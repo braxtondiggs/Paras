@@ -6,19 +6,27 @@
 
 - 📅 **Calendar & List Views**: Switch between calendar and chronological list views of parking rules
 - 🔔 **Custom Notifications**: Set personalized alerts for today's rules and next-day reminders
-- 📱 **Mobile-First**: Built with Ionic and Capacitor for native iOS and Android experience
-- 🌙 **Dark Mode**: Toggle between light and dark themes
+- 📱 **Mobile-First**: Built with modern Ionic 8 and Capacitor for native iOS and Android experience
+- 🌙 **Dark Mode**: Toggle between light and dark themes with system preference support
 - 📍 **NYC-Specific**: Focused exclusively on New York City alternate side parking rules
 - 💾 **Offline Support**: View cached parking data even when offline
 - ⚡ **Real-time Updates**: Live data from NYC parking authorities via Firebase
+- 🎨 **Enhanced UI**: Modern card-based interface with loading states and status indicators
+- ♿ **Accessibility**: WCAG compliant with screen reader support and high contrast mode
+- 📊 **Status Indicators**: Color-coded badges and icons for quick rule status identification
+- 🔄 **Skeleton Loading**: Smooth loading experience with skeleton placeholder UI
+- 📐 **Responsive Design**: Optimized for all screen sizes with mobile-first approach
 
 ## Tech Stack
 
-- **Frontend**: Angular 20 + Ionic 8 + TypeScript
+- **Frontend**: Angular 20 + Ionic 8 + TypeScript 5.8 (with strict typing)
+- **Architecture**: Standalone components with signal-based reactivity
 - **Mobile**: Capacitor 7 for native iOS/Android features
 - **Backend**: Firebase/Firestore for real-time data and push notifications
-- **State**: Angular Signals for reactive state management
-- **Testing**: Jest with Angular preset and Spectator
+- **State Management**: Angular Signals with computed values and reactive patterns
+- **UI Components**: Enhanced Ionic 8 components with skeleton loading and status indicators
+- **Testing**: Jest 29 with Angular preset and Spectator for component testing
+- **Code Quality**: ESLint 9 + Prettier 3 with strict TypeScript configuration
 - **Date/Time**: Day.js for date manipulation and formatting
 
 ## Quick Start
@@ -83,10 +91,10 @@ src/
 
 ## Key Components
 
-- **HomePage**: Main interface with calendar/list toggle and parking data
+- **HomePage**: Main interface with calendar/list toggle and parking data display
 - **SettingsPage**: User preferences, notifications, and app settings
-- **FeedService**: Manages parking data from Firebase with caching
-- **HorizontalCalendar**: Custom calendar component for date navigation
+- **FeedService**: Manages parking data from Firebase with intelligent caching and offline support
+- **HorizontalCalendar**: Custom calendar component for intuitive date navigation
 
 ## Contributing
 

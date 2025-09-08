@@ -30,7 +30,6 @@ export class MockFeedService {
       reason: 'Test reason'
     })
   );
-  getCachedFeeds = jest.fn().mockReturnValue(of([]));
   offlineStatus = jest.fn().mockReturnValue(false);
   retryConnection = jest.fn().mockResolvedValue(undefined);
 }

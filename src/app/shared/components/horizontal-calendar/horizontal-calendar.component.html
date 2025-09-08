@@ -1,42 +1,70 @@
-<div class="container">
-  <div class="horizontal-container">
-    @if (active(); as activeItem) {
-      <div class="month">{{ activeItem.month.long }}</div>
-    }
-    <div class="swiper-container">
-      <swiper-container
-        #swiper
-        [initialSlide]="6"
-        [slidesPerView]="7"
-        [spaceBetween]="4"
-        [centeredSlides]="true"
-        (swiperslidechange)="onSlideChange()"
-        class="swiper"
-      >
-        @for (item of items(); track item.text; let i = $index) {
-          <swiper-slide class="swiper-slide">
-            <div
-              [ngClass]="{ notice: hasNotice(item, feeds()) }"
-              (click)="slideTo(i)"
-              (keyup.enter)="slideTo(i)"
-              class="ion-activatable ripple-parent"
-            >
-              <h6 class="day-short">{{ item.day.short }}</h6>
-              <h5 class="day-num">{{ item.day.num }}</h5>
-              <ion-ripple-effect></ion-ripple-effect>
-            </div>
-          </swiper-slide>
-        }
-      </swiper-container>
-      <ion-button fill="clear" color="dark" class="end action-btn" (click)="slideNext()">
-        <ion-icon slot="icon-only" name="arrow-forward"></ion-icon>
-      </ion-button>
-      <ion-button fill="clear" color="dark" class="start action-btn" (click)="slidePrev()">
-        <ion-icon slot="icon-only" name="arrow-back"></ion-icon>
-      </ion-button>
-    </div>
-  </div>
-  @if (selected(); as selectedItem) {
-    <app-card-detail [item]="selectedItem"></app-card-detail>
+<!-- Error State -->
+@if (hasError()) {
+  <ion-item lines="none" color="danger" class="ion-margin">
+    <ion-icon name="alert-circle" slot="start"></ion-icon>
+    <ion-label>
+      <h3>{{ error() }}</h3>
+      <p>Please try again later</p>
+    </ion-label>
+  </ion-item>
+}
+
+<!-- Calendar Content -->
+@if (!isLoading() && !hasError()) {
+  <!-- Calendar Header -->
+  @if (active(); as activeItem) {
+    <ion-item lines="none" class="ion-text-center">
+      <ion-label>
+        <h2>{{ activeItem.month.long }} {{ activeItem.date | date: 'yyyy' }}</h2>
+      </ion-label>
+    </ion-item>
   }
-</div>
+
+  <!-- Calendar Navigation -->
+  <div class="calendar-swiper-container ion-padding-horizontal">
+    <swiper-container
+      #swiper
+      [initialSlide]="6"
+      [slidesPerView]="7"
+      [spaceBetween]="4"
+      [centeredSlides]="true"
+      (swiperslidechange)="onSlideChange()"
+      class="swiper"
+    >
+      @for (item of items(); track item.text; let i = $index) {
+        <swiper-slide class="swiper-slide">
+          <div
+            [ngClass]="{
+              'has-notice': hasNotice(item, feeds()),
+              'is-active': active()?.text === item.text,
+              'is-today': isToday(item)
+            }"
+            (click)="slideTo(i)"
+            (keyup.enter)="slideTo(i)"
+            class="ion-activatable ripple-parent"
+          >
+            <div class="day-short">{{ item.day.short }}</div>
+            <div class="day-number">{{ item.day.num }}</div>
+            @if (hasNotice(item, feeds())) {
+              <div class="notice-indicator"></div>
+            }
+            <ion-ripple-effect></ion-ripple-effect>
+          </div>
+        </swiper-slide>
+      }
+    </swiper-container>
+    <ion-button fill="clear" color="dark" class="end action-btn" (click)="slideNext()">
+      <ion-icon slot="icon-only" name="arrow-forward"></ion-icon>
+    </ion-button>
+    <ion-button fill="clear" color="dark" class="start action-btn" (click)="slidePrev()">
+      <ion-icon slot="icon-only" name="arrow-back"></ion-icon>
+    </ion-button>
+  </div>
+
+  <!-- Selected Date Details -->
+  @if (selected(); as selectedItem) {
+    <div class="ion-padding-top ion-padding-horizontal">
+      <app-card-detail [item]="selectedItem"></app-card-detail>
+    </div>
+  }
+}

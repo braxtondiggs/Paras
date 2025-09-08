@@ -1,35 +1,89 @@
-<div class="card-container">
-  @if (detail(); as detail) {
+<div class="card-container" [attr.aria-busy]="isLoading()">
+  @if (isLoading()) {
     <ion-card>
-      <ion-card-header [color]="detail.active ? 'primary' : 'danger'">
-        <span class="date">{{ detail.date }}</span>
-        <span class="status">
-          <ion-icon [name]="!detail.active ? 'close-circle-outline' : 'checkmark-circle-outline'"></ion-icon>
-        </span>
+      <ion-card-header>
+        <ion-skeleton-text animated style="width: 60%; height: 20px"></ion-skeleton-text>
+        <ion-skeleton-text animated style="width: 24px; height: 24px; border-radius: 50%"></ion-skeleton-text>
       </ion-card-header>
       <ion-card-content>
-        <ion-list>
-          <ion-item lines="none">
+        <ion-skeleton-text animated style="width: 100%; height: 16px"></ion-skeleton-text>
+        <ion-skeleton-text animated style="width: 80%; height: 16px"></ion-skeleton-text>
+        <ion-skeleton-text animated style="width: 90%; height: 16px"></ion-skeleton-text>
+      </ion-card-content>
+    </ion-card>
+  } @else if (detail()) {
+    <ion-card class="parking-card" [class]="'status-' + (detail()?.active ? 'active' : 'inactive')">
+      <ion-card-header [color]="statusColor()" class="card-header">
+        <div class="date-section">
+          <ion-icon name="calendar-outline" class="date-icon"></ion-icon>
+          <span class="date" [attr.aria-label]="'Date: ' + detail()?.date">{{ detail()?.date }}</span>
+        </div>
+        <div class="status-section">
+          <ion-badge [color]="statusColor()" class="status-badge">
+            <ion-icon [name]="statusIcon()" class="status-icon"></ion-icon>
+            <span class="status-text">{{ statusText() }}</span>
+          </ion-badge>
+        </div>
+      </ion-card-header>
+
+      <ion-card-content class="card-content">
+        <ion-list class="info-list" lines="none">
+          <ion-item class="info-item">
+            <ion-icon name="car-outline" slot="start" class="item-icon"></ion-icon>
             <ion-text>
-              Alt. parking in effect?&nbsp;<strong>{{ detail.active ? 'Yes' : 'No' }}</strong>
+              <h3 class="info-label">Alternate Side Parking</h3>
+              <p class="info-value" [class]="detail()?.active ? 'text-danger' : 'text-success'">
+                {{ detail()?.active ? 'In Effect' : 'Suspended' }}
+              </p>
             </ion-text>
           </ion-item>
-          @if (detail.reason && !detail.active) {
-            <ion-item lines="none">
-              <ion-text class="ion-text-wrap">
-                Explanation:&nbsp;<strong>{{ detail.reason }}</strong>
+
+          <ion-item class="info-item">
+            <ion-icon name="time-outline" slot="start" class="item-icon"></ion-icon>
+            <ion-text>
+              <h3 class="info-label">Parking Meters</h3>
+              <p class="info-value" [class]="detail()?.metered ? 'text-warning' : 'text-success'">
+                {{ detail()?.metered ? 'In Effect' : 'Not in Effect' }}
+              </p>
+            </ion-text>
+          </ion-item>
+
+          @if (detail()?.reason && !detail()?.active) {
+            <ion-item class="info-item reason-item">
+              <ion-icon name="information-circle-outline" slot="start" class="item-icon"></ion-icon>
+              <ion-text>
+                <h3 class="info-label">Reason for Suspension</h3>
+                <p class="info-value reason-text">{{ detail()?.reason }}</p>
               </ion-text>
             </ion-item>
           }
-          <ion-item lines="none">
-            <ion-text class="ion-text-wrap">
-              Meters in effect?:&nbsp;<strong>{{ detail.metered ? 'Yes' : 'No' }}</strong>
-            </ion-text>
-          </ion-item>
+
+          @if (detail()?.text) {
+            <ion-item class="info-item description-item">
+              <ion-icon name="document-text-outline" slot="start" class="item-icon"></ion-icon>
+              <ion-text>
+                <h3 class="info-label">Additional Information</h3>
+                <p class="info-value description-text">{{ detail()?.text }}</p>
+              </ion-text>
+            </ion-item>
+          }
         </ion-list>
-        @if (detail.lastUpdated) {
-          <div class="updated">Updated {{ detail.created }}</div>
+
+        @if (detail()?.lastUpdated) {
+          <div class="updated-info" [attr.aria-label]="'Last updated ' + detail()?.created">
+            <ion-icon name="refresh-outline" class="update-icon"></ion-icon>
+            <span class="update-text">Updated {{ detail()?.created }}</span>
+          </div>
         }
+      </ion-card-content>
+    </ion-card>
+  } @else {
+    <ion-card class="empty-state">
+      <ion-card-content>
+        <div class="empty-content">
+          <ion-icon name="document-outline" class="empty-icon"></ion-icon>
+          <p class="empty-text">No parking information available</p>
+        </div>
       </ion-card-content>
     </ion-card>
   }

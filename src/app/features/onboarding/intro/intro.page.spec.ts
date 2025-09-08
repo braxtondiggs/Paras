@@ -1,6 +1,8 @@
 import { Router } from '@angular/router';
 import { Preferences } from '@capacitor/preferences';
-import { createComponentFactory, Spectator } from '@ngneat/spectator/jest';
+import type { Spectator } from '@ngneat/spectator/jest';
+// eslint-disable-next-line no-duplicate-imports
+import { createComponentFactory } from '@ngneat/spectator/jest';
 import { IntroPage } from './intro.page';
 
 // Mock Capacitor Preferences
@@ -29,7 +31,7 @@ describe('IntroPage', () => {
     component = spectator.component;
     mockRouter = spectator.inject(Router);
     consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    
+
     // Clear all mocks
     jest.clearAllMocks();
   });
@@ -76,7 +78,7 @@ describe('IntroPage', () => {
     it('should show correct feature titles', () => {
       const titles = spectator.queryAll('.feature-card h3');
       const expectedTitles = ['Smart Calendar', 'Custom Alerts', 'Real-time Updates', 'Dark Mode'];
-      
+
       titles.forEach((title, index) => {
         expect(title).toHaveText(expectedTitles[index]);
       });
@@ -85,7 +87,7 @@ describe('IntroPage', () => {
     it('should display feature descriptions', () => {
       const descriptions = spectator.queryAll('.feature-card p');
       expect(descriptions).toHaveLength(4);
-      
+
       descriptions.forEach(desc => {
         expect(desc.textContent?.trim()).not.toBe('');
       });
@@ -105,7 +107,7 @@ describe('IntroPage', () => {
     it('should render feature icons with correct names', () => {
       const expectedIcons = ['calendar-outline', 'notifications-outline', 'time-outline', 'moon-outline'];
       const featureIcons = spectator.queryAll('.feature-card ion-icon');
-      
+
       expectedIcons.forEach((iconName, index) => {
         expect(featureIcons[index]).toHaveAttribute('name', iconName);
       });
@@ -120,7 +122,7 @@ describe('IntroPage', () => {
 
     it('should call continue method when get started button is clicked', async () => {
       const continueSpy = jest.spyOn(component, 'continue');
-      
+
       const button = spectator.query('.get-started-btn');
       spectator.click(button!);
 
@@ -143,7 +145,7 @@ describe('IntroPage', () => {
 
     it('should handle multiple rapid clicks', async () => {
       const button = spectator.query('.get-started-btn');
-      
+
       // Simulate rapid clicking
       spectator.click(button!);
       spectator.click(button!);
@@ -308,11 +310,11 @@ describe('IntroPage', () => {
 
     it('should have descriptive feature content', () => {
       const featureCards = spectator.queryAll('.feature-card');
-      
+
       featureCards.forEach(card => {
         const title = card.querySelector('h3');
         const description = card.querySelector('p');
-        
+
         expect(title?.textContent?.trim()).not.toBe('');
         expect(description?.textContent?.trim()).not.toBe('');
       });
@@ -333,11 +335,7 @@ describe('IntroPage', () => {
     it('should handle rapid multiple method calls', async () => {
       (Preferences.set as jest.Mock).mockResolvedValue(undefined);
 
-      const promises = [
-        component.continue(),
-        component.continue(),
-        component.continue()
-      ];
+      const promises = [component.continue(), component.continue(), component.continue()];
 
       await Promise.all(promises);
 
@@ -349,7 +347,7 @@ describe('IntroPage', () => {
       // First call fails
       (Preferences.set as jest.Mock).mockRejectedValueOnce(new Error('Storage error'));
       await component.continue();
-      
+
       expect(consoleWarnSpy).toHaveBeenCalled();
       expect(mockRouter.navigate).toHaveBeenCalledTimes(1);
 

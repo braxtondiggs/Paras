@@ -6,7 +6,7 @@
       "@app/*": ["app/*"],
       "@shared/*": ["app/shared/*"],
       "@features/*": ["app/features/*"],
-      "@data/*": ["app/data/*"],
+      "@core/*": ["app/core/*"],
       "@layout/*": ["app/layout/*"],
       "@environments/*": ["environments/*"],
       "@assets/*": ["assets/*"]
@@ -29,15 +29,6 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node"
   },
-  "files": [
-    "src/polyfills.ts",
-    "src/setup-jest.ts"
-  ],
-  "include": [
-    "src/**/*.spec.ts",
-    "src/**/*.test.ts",
-    "src/**/*.d.ts",
-    "src/test-utils/**/*.ts",
-    "src/types/**/*.d.ts"
-  ]
+  "files": ["src/polyfills.ts", "src/setup-jest.ts"],
+  "include": ["src/**/*.spec.ts", "src/**/*.test.ts", "src/**/*.d.ts", "src/test-utils/**/*.ts", "src/types/**/*.d.ts"]
 }
