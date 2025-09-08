@@ -1,7 +1,8 @@
-import { Component, inject, input, ChangeDetectionStrategy } from '@angular/core';
-import { IonButton, IonButtons, IonContent, IonHeader, IonToolbar, ModalController } from '@ionic/angular/standalone';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { Analytics, logEvent } from '@angular/fire/analytics';
-import { Feed } from '@shared/interfaces';
+import { IonButton, IonButtons, IonContent, IonHeader, IonToolbar, ModalController } from '@ionic/angular/standalone';
+
+import { type Feed } from '@core/services';
 import { CardDetailComponent } from './../card-detail/card-detail.component';
 
 @Component({

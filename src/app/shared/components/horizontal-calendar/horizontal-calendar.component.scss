@@ -8,46 +8,31 @@ $card-active-background: #dbe2ef;
 $text-color: #393e46;
 $main-color: color.adjust($card-border, $lightness: -30%);
 
-.horizontal-container {
-  margin-top: 16px;
+.calendar-swiper-container {
+  display: flex;
+  padding: 0 4px;
   position: relative;
 
-  .swiper-container {
-    display: flex;
-    padding: 0 4px;
-    position: relative;
-
-    .swiper {
-      margin: 0 30px;
-    }
-
-    ion-button {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      transform: translate(0, -50%);
-      --padding-start: 0;
-      --padding-end: 0;
-      --opacity: 0.8;
-
-      &.start {
-        left: 0;
-      }
-
-      &.end {
-        right: 0;
-      }
-    }
+  .swiper {
+    margin: 0 30px;
   }
 
-  .month {
-    color: $text-color;
-    font-size: 22px;
-    font-weight: 500;
-    letter-spacing: 0.8px;
-    line-height: 1.2;
-    margin-bottom: 16px;
-    text-align: center;
+  ion-button {
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    transform: translate(0, -50%);
+    --padding-start: 0;
+    --padding-end: 0;
+    --opacity: 0.8;
+
+    &.start {
+      left: 0;
+    }
+
+    &.end {
+      right: 0;
+    }
   }
 }
 
@@ -58,7 +43,6 @@ $main-color: color.adjust($card-border, $lightness: -30%);
   display: flex;
   height: 45px;
   overflow: hidden;
-
   > div {
     display: flex;
     flex: 1;
@@ -77,11 +61,11 @@ $main-color: color.adjust($card-border, $lightness: -30%);
   }
 
   .day-short,
-  .day-num {
+  .day-number {
     margin: 0;
   }
 
-  .day-num {
+  .day-number {
     color: $text-color;
   }
 
@@ -100,7 +84,7 @@ $main-color: color.adjust($card-border, $lightness: -30%);
     text-transform: uppercase;
   }
 
-  .notice::after {
+  .has-notice .notice-indicator {
     background-color: $alert;
     border-radius: 50%;
     bottom: 2px;
@@ -112,9 +96,4 @@ $main-color: color.adjust($card-border, $lightness: -30%);
     transform: translate(-50%, 0);
     width: 6px;
   }
-}
-
-app-card-detail {
-  display: block;
-  margin: 40px 16px;
 }

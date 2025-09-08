@@ -1,95 +1,111 @@
 import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { PreloadAllModules, provideRouter, RouteReuseStrategy, withPreloading } from '@angular/router';
-import { provideIonicAngular, IonicRouteStrategy } from '@ionic/angular/standalone';
 import { Capacitor } from '@capacitor/core';
+import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone';
 
-import { provideFirebaseApp, initializeApp } from '@angular/fire/app';
+import { getAnalytics, provideAnalytics } from '@angular/fire/analytics';
+import { getApp, initializeApp, provideFirebaseApp } from '@angular/fire/app';
+import { initializeAppCheck, provideAppCheck, ReCaptchaEnterpriseProvider } from '@angular/fire/app-check';
+import { connectAuthEmulator, getAuth, provideAuth } from '@angular/fire/auth';
 import {
-  getFirestore,
-  provideFirestore,
   connectFirestoreEmulator,
-  enableMultiTabIndexedDbPersistence
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  provideFirestore
 } from '@angular/fire/firestore';
-import { provideAuth, getAuth, connectAuthEmulator } from '@angular/fire/auth';
-import { provideAnalytics, getAnalytics } from '@angular/fire/analytics';
-import { providePerformance, getPerformance } from '@angular/fire/performance';
-// import { initializeAppCheck, provideAppCheck, ReCaptchaV3Provider } from '@angular/fire/app-check';
+import { getFunctions, provideFunctions } from '@angular/fire/functions';
+import { getMessaging, provideMessaging } from '@angular/fire/messaging';
+import { getPerformance, providePerformance } from '@angular/fire/performance';
 
 import { AppComponent } from '@app/app.component';
 import { routes } from '@app/app.routes';
 import { environment } from '@environments/environment';
 
-const platform = Capacitor.getPlatform();
-const devHost = platform === 'android' ? '10.0.2.2' : 'localhost';
+// Initialize production mode
 if (environment.production) {
   enableProdMode();
 }
+
+// Platform-specific configuration
+const platform = Capacitor.getPlatform();
+const emulatorHost = platform === 'android' ? '10.0.2.2' : 'localhost';
 
 const providers = [
   provideRouter(routes, withPreloading(PreloadAllModules)),
   { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
   provideIonicAngular({ mode: 'md', innerHTMLTemplatesEnabled: true }),
 
-  // Firebase providers with enhanced configuration
+  // Firebase App - Initialize first
   provideFirebaseApp(() => initializeApp(environment.firebase)),
 
+  // Firestore with offline persistence and emulator support
   provideFirestore(() => {
-    const firestore = getFirestore();
+    const firestore = initializeFirestore(getApp(), {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
 
-    // Connect to emulator in development
-    if (!environment.production) {
+    // Connect to emulator in development (when available)
+    if (!environment.production && environment.useEmulators) {
       try {
-        connectFirestoreEmulator(firestore, devHost, 8080);
+        connectFirestoreEmulator(firestore, emulatorHost, 8080);
+        console.warn(`🔥 Connected to Firestore emulator at ${emulatorHost}:8080`);
       } catch (error) {
         console.warn('Firestore emulator connection failed:', error);
       }
     }
 
-    // Enable offline persistence (will be handled gracefully if already enabled)
-    enableMultiTabIndexedDbPersistence(firestore).catch(error => {
-      if (error.code === 'failed-precondition') {
-        console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time');
-      } else if (error.code === 'unimplemented') {
-        console.warn("Browser doesn't support persistence");
-      }
-    });
-
     return firestore;
   }),
 
+  // Authentication with emulator support
   provideAuth(() => {
     const auth = getAuth();
-    if (!environment.production) {
+
+    if (!environment.production && environment.useEmulators) {
       try {
-        connectAuthEmulator(auth, `http://${devHost}:9099`, {
+        connectAuthEmulator(auth, `http://${emulatorHost}:9099`, {
           disableWarnings: true
         });
+        console.warn(`🔐 Connected to Auth emulator at ${emulatorHost}:9099`);
       } catch (error) {
         console.warn('Auth emulator connection failed:', error);
       }
     }
+
     return auth;
   }),
 
-  // Analytics with support check
-  provideAnalytics(() => getAnalytics()),
+  // Cloud Functions
+  provideFunctions(() => getFunctions()),
 
-  providePerformance(() => getPerformance())
+  // Cloud Messaging for push notifications
+  provideMessaging(() => getMessaging()),
 
-  // App Check for production security (optional - commented out until recaptcha key is configured)
-  // ...(environment.production && environment.firebase.appId
-  //   ? [
-  //       provideAppCheck(() =>
-  //         initializeAppCheck(undefined, {
-  //           provider: new ReCaptchaV3Provider('your-recaptcha-site-key'),
-  //           isTokenAutoRefreshEnabled: true
-  //         })
-  //       )
-  //     ]
-  //   : [])
+  // Analytics - only in production or when explicitly enabled
+  ...(environment.production || environment.enableAnalytics ? [provideAnalytics(() => getAnalytics())] : []),
+
+  // Performance monitoring
+  ...(environment.production || environment.enablePerformance ? [providePerformance(() => getPerformance())] : []),
+
+  // App Check for production security
+  ...(environment.production
+    ? [
+        provideAppCheck(() => {
+          // TODO: Replace with your reCAPTCHA Enterprise site key from https://console.cloud.google.com/security/recaptcha
+          const provider = new ReCaptchaEnterpriseProvider('your-recaptcha-site-key');
+          return initializeAppCheck(undefined, {
+            provider,
+            isTokenAutoRefreshEnabled: true
+          });
+        })
+      ]
+    : [])
 ];
 
 bootstrapApplication(AppComponent, {
   providers
-}).catch(err => console.error(err));
+}).catch(err => console.error('❌ Bootstrap failed:', err));

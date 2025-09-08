@@ -1,38 +1,38 @@
 import {
-  Component,
-  ElementRef,
-  ViewChild,
   AfterViewInit,
-  CUSTOM_ELEMENTS_SCHEMA,
-  inject,
   ChangeDetectionStrategy,
-  signal,
+  Component,
   computed,
-  DestroyRef
+  CUSTOM_ELEMENTS_SCHEMA,
+  DestroyRef,
+  ElementRef,
+  inject,
+  signal,
+  ViewChild
 } from '@angular/core';
-import { ModalDetailComponent } from '@shared/components/modal-detail/modal-detail.component';
-import { Feed } from '@shared/interfaces';
-import { FeedService } from '@data/services';
-import dayjs, { Dayjs } from 'dayjs';
-import { lastValueFrom } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { addIcons } from 'ionicons';
-import { calendarOutline, settingsOutline } from 'ionicons/icons';
+import { Router, RouterLink } from '@angular/router';
+import { FeedService, type Feed } from '@core/services';
 import {
-  IonRouterLink,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonButton,
   IonButtons,
   IonContent,
-  IonIcon,
-  ModalController,
   IonDatetime,
+  IonHeader,
+  IonIcon,
+  IonRouterLink,
+  IonTitle,
+  IonToolbar,
+  ModalController,
   PickerColumnOption
 } from '@ionic/angular/standalone';
-import { Router, RouterLink } from '@angular/router';
 import { HorizontalCalendarComponent } from '@shared/components/horizontal-calendar/horizontal-calendar.component';
+import { ModalDetailComponent } from '@shared/components/modal-detail/modal-detail.component';
+import dayjs, { Dayjs } from 'dayjs';
+import { addIcons } from 'ionicons';
+import { calendarOutline, settingsOutline } from 'ionicons/icons';
+import { lastValueFrom } from 'rxjs';
+import { take } from 'rxjs/operators';
 
 @Component({
   imports: [
@@ -106,21 +106,45 @@ export class HomePage implements AfterViewInit {
   switchCalenderView() {
     const newSlide = this.activeSlide() ? 0 : 1;
     this.activeSlide.set(newSlide);
-    this.swiper?.nativeElement.swiper?.slideTo(newSlide);
-    this.router.navigate([`/home${newSlide ? '/calendar' : ''}`], { replaceUrl: true });
+
+    // Smooth transition to new slide
+    const swiperInstance = this.swiper?.nativeElement?.swiper;
+    if (swiperInstance) {
+      swiperInstance.slideTo(newSlide, 300); // 300ms transition
+    }
+
+    // Update route to reflect current view
+    this.router.navigate([`/home${newSlide ? '/calendar' : ''}`], {
+      replaceUrl: true
+    });
   }
 
   private getData(start: Dayjs, end: Dayjs) {
     this.feed
-      .getCachedFeeds(start, end) // Use cached version for better performance
+      .getFeeds({
+        startDate: start,
+        endDate: end,
+        type: 'NYC'
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(items => {
+      .subscribe((items: Feed[]) => {
+        console.warn('🔥 Fetched feed items:', items.length);
         this.items.set(items);
       });
   }
 
   private async getLastDate() {
-    const { date } = await lastValueFrom(this.feed.getLast());
-    this.maxDate.set(dayjs(date.toDate()).endOf('month').subtract(1, 'day').toISOString());
+    try {
+      const lastFeed = await lastValueFrom(this.feed.getLastDate().pipe(take(1)));
+      if (lastFeed?.date) {
+        this.maxDate.set(dayjs(lastFeed.date.toDate()).endOf('month').subtract(1, 'day').toISOString());
+      } else {
+        this.maxDate.set(dayjs().endOf('month').subtract(1, 'day').toISOString());
+      }
+    } catch (error) {
+      console.error('Error fetching last date:', error);
+      // Fallback to current month on error
+      this.maxDate.set(dayjs().endOf('month').subtract(1, 'day').toISOString());
+    }
   }
 }

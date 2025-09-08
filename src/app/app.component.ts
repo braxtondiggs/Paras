@@ -1,11 +1,19 @@
-import { Component, EnvironmentInjector, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
-import { Title } from '@angular/platform-browser';
-import { Router, NavigationEnd, ActivatedRoute } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EnvironmentInjector,
+  inject,
+  OnInit,
+  runInInjectionContext,
+  signal
+} from '@angular/core';
 import { Analytics, setUserProperties } from '@angular/fire/analytics';
-import { Platform, AlertController, IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
-import { PushNotifications, Token } from '@capacitor/push-notifications';
+import { Title } from '@angular/platform-browser';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Network } from '@capacitor/network';
 import { Preferences } from '@capacitor/preferences';
+import { PushNotifications, Token } from '@capacitor/push-notifications';
+import { AlertController, IonApp, IonRouterOutlet, Platform } from '@ionic/angular/standalone';
 import { filter, map } from 'rxjs/operators';
 
 @Component({
@@ -45,6 +53,11 @@ export class AppComponent implements OnInit {
     const networkStatus = await Network.getStatus();
     this.isNetworkConnected.set(networkStatus.connected);
     if (!networkStatus.connected) await this.showNetworkAlert();
+
+    // Listen for network changes to update offline state
+    Network.addListener('networkStatusChange', status => {
+      this.isNetworkConnected.set(status.connected);
+    });
 
     if (!this.platform.is('ios')) this.getFCMNotification();
   }
@@ -87,7 +100,11 @@ export class AppComponent implements OnInit {
 
     if (darkMode) await Preferences.set({ key: 'darkMode', value: prefersDark.matches.toString() });
     this.toggleDarkTheme(darkMode);
-    setUserProperties(this.analytics, { darkMode: darkMode.toString() });
+
+    runInInjectionContext(this.environmentInjector, () => {
+      setUserProperties(this.analytics, { darkMode: darkMode.toString() });
+    });
+
     prefersDark.addEventListener('change', mediaQuery => {
       this.isDarkMode.set(mediaQuery.matches);
       this.toggleDarkTheme(mediaQuery.matches);

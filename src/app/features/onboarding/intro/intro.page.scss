@@ -5,10 +5,6 @@ ion-content {
 .intro-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
 }
 
 .intro-header {
@@ -23,13 +19,12 @@ ion-content {
 
 .logo-container {
   margin-bottom: 2rem;
-  
+
   .intro-logo {
     width: 200px;
     height: auto;
     max-width: 80vw;
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
     background: transparent;
     object-fit: contain;
   }
@@ -43,7 +38,7 @@ ion-content {
     color: var(--ion-color-primary-contrast);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
-  
+
   p {
     margin: 0;
     font-size: 1rem;
@@ -83,14 +78,14 @@ ion-content {
 
   ion-text {
     flex: 1;
-    
+
     h3 {
       margin: 0 0 0.5rem 0;
       font-size: 1.1rem;
       font-weight: 600;
       color: var(--ion-color-dark);
     }
-    
+
     p {
       margin: 0;
       font-size: 0.9rem;
@@ -108,7 +103,7 @@ ion-content {
     font-size: 1.1rem;
     height: 56px;
     --color: var(--ion-color-primary);
-    
+
     ion-icon {
       margin-left: 0.5rem;
     }
@@ -120,62 +115,20 @@ ion-content {
   .intro-header {
     margin-bottom: 2rem;
   }
-  
+
   .intro-features {
     margin-bottom: 2rem;
   }
-  
+
   .logo-container {
     margin-bottom: 1rem;
-    
+
     .intro-logo {
       width: 150px;
     }
   }
-  
+
   .intro-title h1 {
     font-size: 2rem;
-  }
-}
-
-@media (max-width: 374px) {
-  .intro-container {
-    padding: 1.5rem 0.75rem;
-  }
-  
-  .feature-card {
-    padding: 1rem;
-    
-    ion-icon {
-      font-size: 1.5rem;
-    }
-    
-    ion-text h3 {
-      font-size: 1rem;
-    }
-    
-    ion-text p {
-      font-size: 0.85rem;
-    }
-  }
-}
-
-// Dark mode support
-body.dark {
-  ion-content {
-    --background: linear-gradient(135deg, var(--ion-color-dark) 0%, var(--ion-color-step-100) 100%);
-  }
-  
-  .feature-card {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    
-    ion-text h3 {
-      color: var(--ion-color-step-50);
-    }
-    
-    ion-text p {
-      color: var(--ion-color-step-400);
-    }
   }
 }

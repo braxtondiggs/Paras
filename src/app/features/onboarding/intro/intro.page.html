@@ -1,5 +1,5 @@
 <ion-content>
-  <div class="intro-container">
+  <div class="intro-container ion-padding">
     <!-- Header Section -->
     <div class="intro-header">
       <div class="logo-container">
@@ -38,24 +38,11 @@
           <p>Stay informed about parking suspensions and rule changes as they happen</p>
         </ion-text>
       </div>
-
-      <div class="feature-card">
-        <ion-icon name="moon-outline" color="dark"></ion-icon>
-        <ion-text>
-          <h3>Dark Mode</h3>
-          <p>Switch between light and dark themes for comfortable viewing anytime</p>
-        </ion-text>
-      </div>
     </div>
 
     <!-- Actions Section -->
     <div class="intro-actions">
-      <ion-button 
-        expand="block" 
-        size="large" 
-        color="light" 
-        class="get-started-btn"
-        (click)="continue()">
+      <ion-button expand="block" size="large" color="light" class="get-started-btn" (click)="continue()">
         Get Started
         <ion-icon name="arrow-forward" slot="end"></ion-icon>
       </ion-button>

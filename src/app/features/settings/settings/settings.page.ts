@@ -1,8 +1,14 @@
-import { Component, inject, OnInit, ChangeDetectionStrategy, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EnvironmentInjector,
+  inject,
+  OnInit,
+  runInInjectionContext,
+  signal
+} from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
-import { addIcons } from 'ionicons';
-import { heart, thumbsUp, informationCircle, moon } from 'ionicons/icons';
 import {
   AlertController,
   IonBackButton,
@@ -12,37 +18,34 @@ import {
   IonHeader,
   IonIcon,
   IonItem,
-  IonItemGroup,
   IonLabel,
   IonList,
   IonListHeader,
-  IonNote,
   IonSelect,
   IonSelectOption,
+  IonSkeletonText,
   IonTitle,
   IonToggle,
   IonToolbar,
   LoadingController,
-  PickerController,
   Platform,
   ToastController
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { heart, informationCircle, moon, thumbsUp } from 'ionicons/icons';
 
 import { Analytics, logEvent, setUserProperties } from '@angular/fire/analytics';
-import { doc, docData, DocumentReference, Firestore, setDoc } from '@angular/fire/firestore';
-import { traceUntilFirst } from '@angular/fire/performance';
 
-import { AuthService } from '@data/services';
-import { Setting } from '@shared/interfaces';
-import { PushNotifications } from '@capacitor/push-notifications';
-import { Preferences } from '@capacitor/preferences';
-import { EmailComposer } from 'capacitor-email-composer';
 import { LaunchReview } from '@awesome-cordova-plugins/launch-review/ngx';
+import { Preferences } from '@capacitor/preferences';
+import { AuthService, SettingsService, type Setting } from '@core/services';
 
-import dayjs, { Dayjs } from 'dayjs';
-import objectSupport from 'dayjs/plugin/objectSupport';
-import customParseFormat from 'dayjs/plugin/customParseFormat';
+import { EmailComposer } from 'capacitor-email-composer';
+
 import 'cordova-plugin-purchase';
+import dayjs, { Dayjs } from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import objectSupport from 'dayjs/plugin/objectSupport';
 
 @Component({
   standalone: true,
@@ -56,13 +59,12 @@ import 'cordova-plugin-purchase';
     IonHeader,
     IonIcon,
     IonItem,
-    IonItemGroup,
     IonLabel,
     IonList,
     IonListHeader,
-    IonNote,
     IonSelect,
     IonSelectOption,
+    IonSkeletonText,
     IonTitle,
     IonToggle,
     IonToolbar
@@ -74,18 +76,18 @@ import 'cordova-plugin-purchase';
 })
 export class SettingsPage implements OnInit {
   private readonly analytics = inject(Analytics);
-  private readonly afs = inject(Firestore);
   private readonly auth = inject(AuthService);
+  private readonly settingsService = inject(SettingsService);
   private readonly alert = inject(AlertController);
   private readonly fb = inject(FormBuilder);
   private readonly launchReview = inject(LaunchReview);
   private readonly loading = inject(LoadingController);
-  private readonly picker = inject(PickerController);
   private readonly platform = inject(Platform);
   private readonly toast = inject(ToastController);
+  private readonly injector = inject(EnvironmentInjector);
 
   readonly uid = signal<string | null>(null);
-  readonly settings = signal<Setting>({
+  readonly settings = signal<Omit<Setting, 'id'>>({
     today: 'none',
     todayCustom: dayjs().format('H:mm'),
     nextDay: 'none',
@@ -133,90 +135,99 @@ export class SettingsPage implements OnInit {
   async ngOnInit() {
     const loading = await this.loading.create();
     loading.present();
-    const uid = await this.auth.uid();
-    this.uid.set(uid);
-    if (uid) {
-      const { value } = await Preferences.get({ key: 'token' });
-      this.token.set(value);
-      docData<Setting>(doc(this.afs, `notifications/${uid}`) as DocumentReference<Setting>)
-        .pipe(traceUntilFirst('getUserNotifications'))
-        .subscribe(async (settings: Setting = {}) => {
-          this.isFirst.set(settings.updateAt === undefined);
-          if (settings.todayCustom)
-            settings.todayCustom = dayjs().set(this.getTime(settings.todayCustom)).format(this.format);
-          if (settings.nextDayCustom)
-            settings.nextDayCustom = dayjs().set(this.getTime(settings.nextDayCustom)).format(this.format);
-          this.settings.set({ ...this.settings(), ...settings });
-          const { value } = await Preferences.get({ key: 'darkMode' });
-          if (value === 'true') this.settings.update(s => ({ ...s, darkMode: true }));
-          this.settingsForm().patchValue(this.settings(), { emitEvent: false, onlySelf: true });
-          setTimeout(() => {
-            this.isLoading.set(false);
-            loading.dismiss();
-          });
-        });
+
+    // Use the modern SettingsService
+    const currentSettings = this.settingsService.settingsSignal();
+    if (currentSettings) {
+      // Update form with current settings
+      const formData = {
+        today: currentSettings.today ?? 'none',
+        nextDay: currentSettings.nextDay ?? 'none',
+        todayCustom: currentSettings.todayCustom ?? dayjs().format(this.format),
+        nextDayCustom: currentSettings.nextDayCustom ?? dayjs().format(this.format),
+        exceptionOnly: currentSettings.exceptionOnly ?? false,
+        weekend: currentSettings.weekend ?? false,
+        darkMode: currentSettings.darkMode ?? false
+      };
+
+      this.settings.set(formData);
+      this.settingsForm().patchValue(formData, { emitEvent: false, onlySelf: true });
     }
 
+    this.isLoading.set(false);
+    loading.dismiss();
+
+    // Set up form change listeners
+    this.setupFormListeners();
+  }
+
+  private setupFormListeners() {
     this.settingsForm().controls['today'].valueChanges.subscribe(async today => {
       if (!today) return;
       if (today === 'custom') return this.openTimePicker('today');
-      await this.save({ today });
+      await this.saveSettings({ today });
     });
 
     this.settingsForm().controls['nextDay'].valueChanges.subscribe(async nextDay => {
       if (!nextDay) return;
       if (nextDay === 'custom') return this.openTimePicker('nextDay');
-      await this.save({ nextDay });
+      await this.saveSettings({ nextDay });
     });
 
     this.settingsForm().controls['darkMode'].valueChanges.subscribe(async value => {
       await Preferences.set({ key: 'darkMode', value: value.toString() });
       document.body.classList.toggle('dark', value);
-      logEvent(this.analytics, 'custom_event', { action: 'dark mode', active: value.toString() });
-      setUserProperties(this.analytics, { darkMode: value.toString() });
+      await this.saveSettings({ darkMode: value });
+
+      runInInjectionContext(this.injector, () => {
+        logEvent(this.analytics, 'custom_event', { action: 'dark mode', active: value.toString() });
+        setUserProperties(this.analytics, { darkMode: value.toString() });
+      });
     });
   }
 
-  async onCheckBoxChange(ev: Event, action: string) {
-    const checked = (ev as any).detail.checked;
-    await this.save({ [action]: checked });
-    logEvent(this.analytics, 'custom_event', { action, active: checked.toString() });
-    setUserProperties(this.analytics, { [action]: checked.toString() });
-  }
+  /**
+   * Modern save method using SettingsService
+   */
+  private async saveSettings(updates: Partial<Setting>): Promise<void> {
+    try {
+      const result = await this.settingsService.updateSettings(updates);
 
-  async save(data: Setting): Promise<void> {
-    let t: HTMLIonToastElement;
-    const { receive } = await PushNotifications.checkPermissions();
-    const createdAt = this.isFirst() ? new Date() : null;
-    data = this.omitByNil({ ...data, token: this.token(), type: 'NYC', updateAt: new Date(), createdAt });
-    if (data.token !== undefined && receive === 'granted') {
-      setDoc(doc(this.afs, `notifications/${this.uid()}`) as DocumentReference<Setting>, data, { merge: true })
-        .then(async () => {
-          t = await this.toast.create({
-            color: 'dark',
-            duration: 1500,
-            message: 'Your settings have been saved.'
-          });
-        })
-        .catch(async () => {
-          t = await this.toast.create({
-            color: 'dark',
-            duration: 1500,
-            message: 'An error has occurred.'
-          });
-        })
-        .finally(() => {
-          t.present();
-          this.isFirst.set(false);
+      if (result.success) {
+        const toast = await this.toast.create({
+          color: 'dark',
+          duration: 1500,
+          message: 'Your settings have been saved.'
         });
-    } else if (receive === 'denied') {
-      t = await this.toast.create({
+        toast.present();
+      } else {
+        const toast = await this.toast.create({
+          color: 'danger',
+          duration: 1500,
+          message: 'An error occurred while saving settings.'
+        });
+        toast.present();
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      const toast = await this.toast.create({
         color: 'danger',
         duration: 1500,
-        message: 'Please enable push notifications.'
+        message: 'An error occurred while saving settings.'
       });
-      t.present();
+      toast.present();
     }
+  }
+
+  async onCheckBoxChange(ev: Event, action: string) {
+    const checked = (ev as CustomEvent).detail.checked;
+    await this.saveSettings({ [action]: checked });
+
+    // Use runInInjectionContext for Firebase analytics
+    runInInjectionContext(this.injector, () => {
+      logEvent(this.analytics, 'custom_event', { action, active: checked.toString() });
+      setUserProperties(this.analytics, { [action]: checked.toString() });
+    });
   }
 
   private getTime(time: string): { hour: number; minute: number } {
@@ -224,9 +235,6 @@ export class SettingsPage implements OnInit {
     const [hour, minute] = time.split(':');
     return { hour: +hour, minute: +minute };
   }
-
-  private omitByNil = (data: any) =>
-    Object.fromEntries(Object.entries(data).filter(([_key, value]) => value !== null && value !== undefined));
 
   getNotificationMessage(type: string, action: string): string {
     const time = type === 'today' ? this.settings().todayCustom : this.settings().nextDayCustom;
@@ -247,7 +255,7 @@ export class SettingsPage implements OnInit {
     if (dayjs(date, 'h:mmA').isBefore(maxTime)) return this.showAlert(maxTime);
     const todayCustom = dayjs(date, 'h:mmA').format(this.format);
     this.settings.update(s => ({ ...s, todayCustom }));
-    await this.save({ today: this.settingsForm().value.today, todayCustom });
+    await this.saveSettings({ today: this.settingsForm().value.today, todayCustom });
   }
 
   onTodayCancel() {
@@ -259,7 +267,7 @@ export class SettingsPage implements OnInit {
     if (dayjs(date, 'h:mmA').isBefore(maxTime)) return this.showAlert(maxTime);
     const nextDayCustom = dayjs(date, 'h:mmA').format(this.format);
     this.settings.update(s => ({ ...s, nextDayCustom }));
-    await this.save({ nextDay: this.settingsForm().value.nextDay, nextDayCustom });
+    await this.saveSettings({ nextDay: this.settingsForm().value.nextDay, nextDayCustom });
   }
 
   onNextDateCancel() {
@@ -272,7 +280,10 @@ export class SettingsPage implements OnInit {
     } else {
       this.launchReview.rating().subscribe();
     }
-    logEvent(this.analytics, 'custom_event', { action: 'rate' });
+
+    runInInjectionContext(this.injector, () => {
+      logEvent(this.analytics, 'custom_event', { action: 'rate' });
+    });
   }
 
   async about() {
@@ -300,7 +311,10 @@ export class SettingsPage implements OnInit {
     });
 
     await alert.present();
-    logEvent(this.analytics, 'custom_event', { action: 'about' });
+
+    runInInjectionContext(this.injector, () => {
+      logEvent(this.analytics, 'custom_event', { action: 'about' });
+    });
   }
 
   async donate() {
@@ -324,7 +338,10 @@ export class SettingsPage implements OnInit {
     });
 
     await alert.present();
-    logEvent(this.analytics, 'custom_event', { action: 'donate' });
+
+    runInInjectionContext(this.injector, () => {
+      logEvent(this.analytics, 'custom_event', { action: 'donate' });
+    });
   }
 
   private async showAlert(maxTime: Dayjs) {
@@ -344,46 +361,51 @@ export class SettingsPage implements OnInit {
 
   async openTimePicker(action: string = 'today') {
     const data = action === 'today' ? this.settings().todayCustom : this.settings().nextDayCustom;
-    const time = dayjs(data, this.format);
-    const hour = time.get('hour');
-    const minute = time.get('minute');
-    const period = hour >= 12 ? 'PM' : 'AM';
-    let m = ((Math.round(minute / 15) * 15) % 60).toString();
-    if (m === '0') m = '00';
-    const picker = await this.picker.create({
+    const currentTime = dayjs(data, this.format);
+
+    // Create alert with datetime input for time selection
+    const alert = await this.alert.create({
+      header: `Select ${action === 'today' ? 'Today' : 'Next Day'} Notification Time`,
+      inputs: [
+        {
+          name: 'time',
+          type: 'time',
+          value: currentTime.format('HH:mm'),
+          placeholder: 'Select time'
+        }
+      ],
       buttons: [
         {
           text: 'Cancel',
-          role: 'cancel'
+          role: 'cancel',
+          handler: () => {
+            if (action === 'today') {
+              this.onTodayCancel();
+            } else {
+              this.onNextDateCancel();
+            }
+          }
         },
         {
           text: 'Done',
-          role: 'save',
-          handler: o => {
-            const date = `${o.hours.text}:${o.minutes.text}${o.periods.text}`;
-            if (action === 'today') this.onTodayChange(date);
-            if (action === 'nextDay') this.onNextDateChange(date);
+          handler: data => {
+            if (data.time) {
+              // Convert 24-hour format to 12-hour format with AM/PM
+              const [hours, minutes] = data.time.split(':');
+              const time24 = dayjs().set('hour', parseInt(hours)).set('minute', parseInt(minutes));
+              const formattedTime = time24.format('h:mm A');
+
+              if (action === 'today') {
+                this.onTodayChange(formattedTime);
+              } else if (action === 'nextDay') {
+                this.onNextDateChange(formattedTime);
+              }
+            }
           }
-        }
-      ],
-      columns: [
-        {
-          name: 'hours',
-          selectedIndex: [...Array(12).keys()].map(k => k + 1).findIndex(o => o == hour),
-          options: [...Array(12).keys()].map(k => k + 1).map(o => ({ text: o.toString() }))
-        },
-        {
-          name: 'minutes',
-          selectedIndex: ['00', '15', '30', '45'].findIndex(o => o == m),
-          options: ['00', '15', '30', '45'].map(text => ({ text }))
-        },
-        {
-          name: 'periods',
-          selectedIndex: ['AM', 'PM'].findIndex(o => o == period.toString()),
-          options: ['AM', 'PM'].map(text => ({ text }))
         }
       ]
     });
-    await picker.present();
+
+    await alert.present();
   }
 }
