@@ -34,7 +34,7 @@ export class AuthService extends BaseFirestoreService<UserDocument> {
   // Firebase services
   private readonly auth = inject(Auth);
   private readonly analytics = inject(Analytics);
-  private readonly environmentInjector = inject(EnvironmentInjector);
+  protected readonly environmentInjector = inject(EnvironmentInjector);
 
   // Reactive state management
   private readonly _isLoading = signal(false);

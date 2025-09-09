@@ -1,4 +1,4 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, EnvironmentInjector, inject, Injectable, runInInjectionContext, signal } from '@angular/core';
 import {
   disableNetwork,
   enableNetwork,
@@ -37,6 +37,7 @@ export interface FeedStatistics {
 })
 export class FeedService extends BaseFirestoreService<Feed> {
   protected readonly collectionName = 'feed' as const;
+  protected readonly environmentInjector = inject(EnvironmentInjector);
 
   // Reactive state
   private readonly _offlineMode = signal(false);
@@ -69,14 +70,16 @@ export class FeedService extends BaseFirestoreService<Feed> {
   getLastDate(type: 'NYC' | 'OTHER' = 'NYC'): Observable<Feed | null> {
     const constraints = [where('type', '==', type), orderBy('date', 'desc'), limit(1)];
 
-    return this.getAll(constraints).pipe(
-      traceUntilFirst('get_last_feed_item'),
-      map(feeds => feeds[0] || null),
-      catchError(error => {
-        console.error('Latest feed fetch error:', error);
-        return of(null);
-      })
-    );
+    return runInInjectionContext(this.environmentInjector, () => {
+      return this.getAll(constraints).pipe(
+        traceUntilFirst('get_last_feed_item'),
+        map(feeds => feeds[0] || null),
+        catchError(error => {
+          console.error('Latest feed fetch error:', error);
+          return of(null);
+        })
+      );
+    });
   }
 
   async bulkCreateFeeds(feeds: Omit<Feed, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<OperationResult> {

@@ -21,7 +21,6 @@
     "importHelpers": true,
     "lib": ["es2020", "dom"],
     "module": "es2020",
-    "moduleResolution": "node",
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
     "outDir": "./dist/out-tsc",

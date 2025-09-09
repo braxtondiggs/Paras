@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { EnvironmentInjector, inject, Injectable, runInInjectionContext } from '@angular/core';
 import {
   collection,
   collectionData,
@@ -30,6 +30,7 @@ import type { FirestoreCollection, FirestoreDocument, OperationResult } from '..
 export abstract class BaseFirestoreService<T extends FirestoreDocument> {
   protected readonly firestore = inject(Firestore);
   protected abstract readonly collectionName: FirestoreCollection;
+  protected readonly environmentInjector = inject(EnvironmentInjector);
 
   // Connection status tracking
   private readonly connectionStatus$ = new BehaviorSubject<boolean>(true);
@@ -48,13 +49,14 @@ export abstract class BaseFirestoreService<T extends FirestoreDocument> {
   getAll(constraints: QueryConstraint[] = []): Observable<T[]> {
     const collectionRef = this.getCollection();
     const queryRef = constraints.length ? query(collectionRef, ...constraints) : collectionRef;
-
-    return collectionData(queryRef, { idField: 'id' }).pipe(
-      traceUntilFirst(`get_all_${this.collectionName}`),
-      catchError(this.handleError.bind(this)),
-      retry({ count: 2, delay: 1000 }),
-      shareReplay({ bufferSize: 1, refCount: true })
-    );
+    return runInInjectionContext(this.environmentInjector, () => {
+      return collectionData(queryRef, { idField: 'id' }).pipe(
+        traceUntilFirst(`get_all_${this.collectionName}`),
+        catchError(this.handleError.bind(this)),
+        retry({ count: 2, delay: 1000 }),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
+    });
   }
 
   getById(id: string): Observable<T | undefined> {
