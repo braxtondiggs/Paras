@@ -1,20 +1,25 @@
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { getRemoteConfig } from 'firebase-admin/remote-config';
-import { log, error } from 'firebase-functions/logger';
+import { logger } from 'firebase-functions/v2';
 import { onSchedule, ScheduleOptions } from 'firebase-functions/v2/scheduler';
+import { defineSecret } from 'firebase-functions/params';
 
 import axios from 'axios';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-dayjs.extend(customParseFormat)
 
 import { getImmediateNotifications, getCustomNotifications } from './fcm';
 import { IASPResponse, Status } from './types';
 
-const app = initializeApp();
+// Extend dayjs with plugins
+dayjs.extend(customParseFormat);
+
+// Define secret for API key
+const aspApiKey = defineSecret('ASP_API_KEY');
+
+// Initialize Firebase
+initializeApp();
 const db = getFirestore();
-const config = getRemoteConfig();
 db.settings({ ignoreUndefinedProperties: true });
 
 async function fetchASPData(fromDate: string, toDate: string, apiKey: string): Promise<IASPResponse> {
@@ -24,38 +29,41 @@ async function fetchASPData(fromDate: string, toDate: string, apiKey: string): P
         const { data } = await axios.get<IASPResponse>(url, { headers });
         return data;
     } catch (err) {
-        error('Failed to fetch ASP data', err);
+        logger.error('Failed to fetch ASP data', err);
         throw err; // Rethrow to handle it in the calling function
     }
 }
 
-async function getASPData(from?: string, to?: string) {
+async function getASPData(from?: string, to?: string, apiKey?: string): Promise<void> {
 	const fromDate = from ?? dayjs().format('YYYY-MM-DD');
 	const toDate = to ?? dayjs().add(1, 'day').format('YYYY-MM-DD');
-	log('Fetching ASP data', fromDate, toDate);
+	logger.info('Fetching ASP data', { fromDate, toDate });
 
-	const { parameters } = await config.getTemplate();
-	const APIKEY = (parameters.ASPKEY.defaultValue as any).value;
-	if (!APIKEY){
-		error('Missing API key for ASP data fetching.');
+	if (!apiKey) {
+		logger.error('Missing API key for ASP data fetching.');
 		return;
 	}
 
 	try {
-		const data = await fetchASPData(fromDate, toDate, APIKEY);
+		const data = await fetchASPData(fromDate, toDate, apiKey);
 		const batch = db.batch();
 		processASPData(data, batch);
 		await batch.commit();
+		logger.info('Successfully processed ASP data', { fromDate, toDate });
 	} catch (err) {
-		error('Error processing ASP data:', err);
+		logger.error('Error processing ASP data:', err);
+		throw err;
 	}
 }
 
-function processASPData(data: IASPResponse, batch: FirebaseFirestore.WriteBatch) {
+function processASPData(data: IASPResponse, batch: FirebaseFirestore.WriteBatch): void {
 	data.days.forEach(({ today_id, items }) => {
         const feedRef = db.doc(`feed/${today_id}`);
         const item = items.find(i => isValidItem(i));
-        if (!item) return batch.delete(feedRef);
+        if (!item) {
+            batch.delete(feedRef);
+            return;
+        }
 
         const { exceptionName, details, status } = item;
         batch.set(feedRef, {
@@ -71,21 +79,32 @@ function processASPData(data: IASPResponse, batch: FirebaseFirestore.WriteBatch)
     });
 }
 
-function isValidItem(item: any) {
-    return item.type === 'Alternate Side Parking' && item.exceptionName !== 'Information Not Available' && !item.details.includes('Sundays');
+interface ASPItem {
+    type: string;
+    exceptionName?: string;
+    details: string;
 }
 
-const getASPMonth = async () => {
-	log('getASPMonth');
+function isValidItem(item: ASPItem): boolean {
+    return item.type === 'Alternate Side Parking' && 
+           item.exceptionName !== 'Information Not Available' && 
+           !item.details.includes('Sundays');
+}
+
+const getASPMonth = async (apiKey: string): Promise<void> => {
+	logger.info('Starting ASP month data fetch');
 	const dates = Array.from({ length: 7 }, (_, i) => {
 		const start = dayjs().add(i * 2, 'month').startOf('month').format('YYYY-MM-DD');
 		const end = dayjs(start).add(2, 'month').subtract(1, 'day').endOf('month').format('YYYY-MM-DD');
 		return { start, end };
 	});
+	
 	for (const { start, end } of dates) {
-		await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5 seconds between requests
-		await getASPData(start, end);
+		await new Promise(resolve => setTimeout(resolve, 5000)); // Rate limiting: wait 5 seconds between requests
+		await getASPData(start, end, apiKey);
 	}
+	
+	logger.info('Completed ASP month data fetch');
 };
 
 function isMetered(text: string): boolean {
@@ -95,25 +114,75 @@ function isMetered(text: string): boolean {
 }
 
 function getReason(text: string): string | undefined {
-	let keyword;
-	if (text.includes('to ')) keyword = 'to ';
-	if (text.includes('for ')) keyword = 'for ';
-	if (text.includes('on ')) keyword = 'on ';
-	if (typeof keyword === 'undefined') return keyword;
+	let keyword: string | undefined;
+	if (text.includes('to ')) {
+        keyword = 'to ';
+    }
+	if (text.includes('for ')) {
+        keyword = 'for ';
+    }
+	if (text.includes('on ')) {
+        keyword = 'on ';
+    }
+	if (typeof keyword === 'undefined') {
+        return undefined;
+    }
   
 	const output = text.split(keyword).pop()?.split('.');
-	if (!output) return;
+	if (!output || !output[0]) {
+        return undefined;
+    }
 	return upperFirst(output[0]);
 }
 
-const upperFirst = (text: string) => {
+const upperFirst = (text: string): string => {
 	return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }
 
-const getSchedule = (schedule: string): ScheduleOptions => ({  schedule, timeZone: 'America/New_York' });
+// Helper function to create schedule options
+const createScheduleOptions = (schedule: string): ScheduleOptions => ({ 
+    schedule, 
+    timeZone: 'America/New_York' 
+});
 
-exports.getASPData = onSchedule(getSchedule('every 4 hours'), async () => await getASPData())
-exports.getASPMonth = onSchedule(getSchedule('30 19 1 * *'), async () => await getASPMonth())
-exports.getCustomNotifications = onSchedule(getSchedule('every 15 minutes'), async () => await getCustomNotifications(db));
-exports.getNotificationsToday = onSchedule(getSchedule('30 7 * * *'), async () => await getImmediateNotifications(db, 'today'));
-exports.getNotificationsTomorrow = onSchedule(getSchedule('0 16 * * *'), async () => await getImmediateNotifications(db, 'nextDay'));
+// 2nd gen Cloud Functions with proper secret handling
+export const getASPDataScheduled = onSchedule(
+    { 
+        ...createScheduleOptions('every 4 hours'),
+        secrets: [aspApiKey]
+    }, 
+    async () => {
+        await getASPData(undefined, undefined, aspApiKey.value());
+    }
+);
+
+export const getASPMonthScheduled = onSchedule(
+    { 
+        ...createScheduleOptions('30 19 1 * *'),
+        secrets: [aspApiKey]
+    }, 
+    async () => {
+        await getASPMonth(aspApiKey.value());
+    }
+);
+
+export const getCustomNotificationsScheduled = onSchedule(
+    createScheduleOptions('every 15 minutes'), 
+    async () => {
+        await getCustomNotifications(db);
+    }
+);
+
+export const getNotificationsToday = onSchedule(
+    createScheduleOptions('30 7 * * *'), 
+    async () => {
+        await getImmediateNotifications(db, 'today');
+    }
+);
+
+export const getNotificationsTomorrow = onSchedule(
+    createScheduleOptions('0 16 * * *'), 
+    async () => {
+        await getImmediateNotifications(db, 'nextDay');
+    }
+);

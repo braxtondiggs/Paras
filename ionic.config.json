@@ -1,8 +1,49 @@
 {
   "name": "ASP NYC",
   "integrations": {
-    "cordova": {},
     "capacitor": {}
   },
-  "type": "angular"
+  "type": "angular",
+  "id": "com.cymbit.paras",
+  "projects": {
+    "app": {
+      "name": "ASP NYC",
+      "integrations": {
+        "capacitor": {}
+      },
+      "type": "angular",
+      "root": ""
+    }
+  },
+  "defaultProject": "app",
+  "hooks": {
+    "build:before": [],
+    "build:after": [],
+    "serve:before": [],
+    "serve:after": []
+  },
+  "generators": [
+    {
+      "name": "@ionic/angular-toolkit"
+    }
+  ],
+  "serve": {
+    "options": {
+      "livereload": true,
+      "port": 8100,
+      "host": "localhost"
+    }
+  },
+  "build": {
+    "options": {
+      "optimization": true,
+      "outputHashing": "all",
+      "sourceMap": false,
+      "namedChunks": false,
+      "extractLicenses": true,
+      "vendorChunk": true,
+      "buildOptimizer": true,
+      "aot": true
+    }
+  }
 }
