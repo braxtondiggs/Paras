@@ -21,6 +21,7 @@ export default {
     '^@app/(.*)$': '<rootDir>/src/app/$1',
     '^@shared/(.*)$': '<rootDir>/src/app/shared/$1',
     '^@features/(.*)$': '<rootDir>/src/app/features/$1',
+    '^@core/(.*)$': '<rootDir>/src/app/core/$1',
     '^@data/(.*)$': '<rootDir>/src/app/data/$1',
     '^@environments/(.*)$': '<rootDir>/src/environments/$1',
     'ionicons/components/ion-icon.js': '@ionic/core/components/ion-icon.js'

@@ -1,23 +1,20 @@
 {
   "name": "functions",
   "scripts": {
-    "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "clean": "rimraf lib/",
-    "start": "npm run build && firebase emulators:start --import=./imports",
-    "start:shell": "npm run build && firebase functions:shell",
-    "start:debug": "npm run build && firebase emulators:start --inspect-functions --import=./imports",
-    "dev": "concurrently \"npm run build:watch\" \"npm run emulators\"",
-    "emulators": "firebase emulators:start --import=./imports",
-    "emulators:export": "firebase emulators:export ./imports",
-    "seed": "node scripts/seed-data.js",
-    "import:sample": "node scripts/import-data.js production-sample.json",
-    "import": "node scripts/import-data.js",
+    "start": "npm run build && firebase emulators:start --only firestore,auth,functions --import=./imports",
+    "dev": "concurrently \"npm run build:watch\" \"firebase emulators:start --only firestore,auth,functions --import=./imports\"",
+    "debug": "npm run build && firebase emulators:start --only firestore,auth,functions --inspect-functions --import=./imports",
     "deploy": "npm run build && firebase deploy --only functions",
     "logs": "firebase functions:log",
+    "seed": "node scripts/seed-data.js",
+    "export": "firebase emulators:export ./imports",
+    "import": "firebase emulators:start --only firestore,auth --import=./imports",
     "test": "jest",
-    "test:emulators": "firebase emulators:exec --only firestore,auth \"npm test\""
+    "test:emulators": "firebase emulators:exec --only firestore,auth \"npm test\"",
+    "lint": "eslint --ext .js,.ts ."
   },
   "engines": {
     "node": "20"

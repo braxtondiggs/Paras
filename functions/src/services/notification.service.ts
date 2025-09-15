@@ -108,7 +108,9 @@ export class NotificationService {
             invalidTokenDeletions.push(snapshots[index].ref.delete());
           }
         } else if (this.isRetryableError(errorCode)) {
-          retryableErrors.push(token);
+          if (typeof token === 'string') {
+            retryableErrors.push(token);
+          }
         }
       }
     });
