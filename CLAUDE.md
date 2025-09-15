@@ -154,7 +154,6 @@ npm run test:watch     # Watch mode testing
 npm run test:coverage  # Coverage reports
 npm run lint           # ESLint checking and fixes
 npm run format         # Prettier formatting
-npm run type-check     # TypeScript checking
 ```
 
 ### Mobile Development

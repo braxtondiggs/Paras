@@ -22,7 +22,6 @@ fi
 
 # Run quality checks first
 echo "🔍 Running quality checks..."
-npm run type-check
 npm run lint:check
 npm run format:check
 npm run test

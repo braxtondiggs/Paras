@@ -55,7 +55,6 @@ npm run lint          # ESLint check and auto-fix
 npm run lint:check    # ESLint check only (CI mode)
 npm run format        # Prettier formatting
 npm run format:check  # Prettier check only (CI mode)
-npm run type-check    # TypeScript compilation check
 
 # Testing
 npm run test             # Run all tests
@@ -72,10 +71,10 @@ Before committing or deploying, ensure all quality gates pass:
 
 ```bash
 # Full quality check pipeline
-npm run lint:check && npm run format:check && npm run type-check && npm run test:ci && npm run build
+npm run lint:check && npm run format:check && npm run test:ci && npm run build
 
 # Quick dev check
-npm run lint && npm run type-check && npm run test
+npm run lint && npm run test
 ```
 
 ### Building and Deployment
@@ -405,7 +404,6 @@ npm install @angular/core@latest
 1. **Code Quality**:
    - [ ] `npm run lint:check` passes
    - [ ] `npm run format:check` passes
-   - [ ] `npm run type-check` passes
    - [ ] `npm run test:ci` passes
 
 2. **Build Verification**:

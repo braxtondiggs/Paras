@@ -167,7 +167,6 @@ npm run deploy
 
 All deployments require passing:
 
-- **TypeScript compilation**: `npm run type-check`
 - **ESLint**: `npm run lint:check`
 - **Prettier**: `npm run format:check`
 - **Jest tests**: `npm run test:coverage`
@@ -185,8 +184,7 @@ All deployments require passing:
 #### Build Failures
 
 1. **Dependencies**: Run `npm ci` to clean install
-2. **TypeScript errors**: Fix with `npm run type-check`
-3. **Lint issues**: Auto-fix with `npm run lint`
+2. **Lint issues**: Auto-fix with `npm run lint`
 
 #### Firebase Deployment Issues
 

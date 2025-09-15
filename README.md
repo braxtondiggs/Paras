@@ -69,7 +69,6 @@ npm run test:watch         # Run tests in watch mode
 npm run test:coverage      # Generate coverage report
 npm run lint               # Lint and fix code
 npm run format             # Format code with Prettier
-npm run type-check         # TypeScript type checking
 
 # Analysis
 npm run stats              # Bundle size analysis

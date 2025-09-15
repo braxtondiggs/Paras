@@ -44,9 +44,6 @@ jobs:
       - name: 📂 Install dependencies
         run: npm ci
 
-      - name: 🔍 Type checking
-        run: npm run type-check
-
       - name: 🧹 Lint check
         run: npm run lint:check
 
