@@ -16,10 +16,10 @@ import advancedFormat from 'dayjs/plugin/advancedFormat';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
 import { addIcons } from 'ionicons';
-import { 
-  calendarOutline, 
-  checkmarkCircleOutline, 
-  closeCircleOutline, 
+import {
+  calendarOutline,
+  checkmarkCircleOutline,
+  closeCircleOutline,
   timeOutline,
   carOutline,
   informationCircleOutline,

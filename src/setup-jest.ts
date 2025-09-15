@@ -59,7 +59,8 @@ Object.defineProperty(globalThis, 'CSS', {
 });
 
 // Global test utilities and configurations
-global.structuredClone = global.structuredClone || ((val: any) => JSON.parse(JSON.stringify(val)));
+// eslint-disable-next-line no-undef
+(global as any).structuredClone = (global as any).structuredClone || ((val: any) => JSON.parse(JSON.stringify(val)));
 
 // Spectator is configured per-test with createComponentFactory, createServiceFactory, etc.
 

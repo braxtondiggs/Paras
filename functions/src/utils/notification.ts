@@ -3,7 +3,6 @@
  */
 
 import { MulticastMessage } from 'firebase-admin/messaging';
-import { NOTIFICATION_TITLE } from '../config/constants';
 
 /**
  * Create a properly configured multicast message for parking notifications

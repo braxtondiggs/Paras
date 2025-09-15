@@ -3,11 +3,21 @@
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
+    "build:watch": "tsc --watch",
     "clean": "rimraf lib/",
     "start": "npm run build && firebase emulators:start --import=./imports",
+    "start:shell": "npm run build && firebase functions:shell",
+    "start:debug": "npm run build && firebase emulators:start --inspect-functions --import=./imports",
+    "dev": "concurrently \"npm run build:watch\" \"npm run emulators\"",
+    "emulators": "firebase emulators:start --import=./imports",
+    "emulators:export": "firebase emulators:export ./imports",
+    "seed": "node scripts/seed-data.js",
+    "import:sample": "node scripts/import-data.js production-sample.json",
+    "import": "node scripts/import-data.js",
     "deploy": "npm run build && firebase deploy --only functions",
     "logs": "firebase functions:log",
-    "test": "jest"
+    "test": "jest",
+    "test:emulators": "firebase emulators:exec --only firestore,auth \"npm test\""
   },
   "engines": {
     "node": "20"
@@ -24,6 +34,7 @@
     "@types/node": "^20.17.10",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
+    "concurrently": "^9.1.0",
     "eslint": "^9.18.0",
     "eslint-plugin-import": "^2.31.0",
     "firebase-functions-test": "^3.3.0",

@@ -1,7 +1,7 @@
 .parking-card {
   margin: 0;
   border-radius: 12px;
-  
+
   &.status-active {
     border-left: 4px solid var(--ion-color-danger);
   }
@@ -16,7 +16,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  
+
   .date-section {
     display: flex;
     align-items: center;

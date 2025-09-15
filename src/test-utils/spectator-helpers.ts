@@ -1,12 +1,12 @@
 import type { Type } from '@angular/core';
-import { createComponentFactory, createServiceFactory, SpectatorService } from '@ngneat/spectator/jest';
+import { createComponentFactory, createServiceFactory } from '@ngneat/spectator/jest';
 import { MockAuthService, MockFeedService } from './firebase-mocks';
 import {
   MockAlertController,
   MockLoadingController,
   MockModalController,
-  MockToastController,
-  MockPlatform
+  MockPlatform,
+  MockToastController
 } from './ionic-mocks';
 
 // Common providers for tests

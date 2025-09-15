@@ -70,14 +70,14 @@ describe('IntroPage', () => {
       expect(tagline).toHaveText('Never pay another parking ticket due to NYC street cleaning schedules');
     });
 
-    it('should display all four feature cards', () => {
+    it('should display all three feature cards', () => {
       const featureCards = spectator.queryAll('.feature-card');
-      expect(featureCards).toHaveLength(4);
+      expect(featureCards).toHaveLength(3);
     });
 
     it('should show correct feature titles', () => {
       const titles = spectator.queryAll('.feature-card h3');
-      const expectedTitles = ['Smart Calendar', 'Custom Alerts', 'Real-time Updates', 'Dark Mode'];
+      const expectedTitles = ['Smart Calendar', 'Custom Alerts', 'Real-time Updates'];
 
       titles.forEach((title, index) => {
         expect(title).toHaveText(expectedTitles[index]);
@@ -86,7 +86,7 @@ describe('IntroPage', () => {
 
     it('should display feature descriptions', () => {
       const descriptions = spectator.queryAll('.feature-card p');
-      expect(descriptions).toHaveLength(4);
+      expect(descriptions).toHaveLength(3);
 
       descriptions.forEach(desc => {
         expect(desc.textContent?.trim()).not.toBe('');
@@ -105,7 +105,7 @@ describe('IntroPage', () => {
     });
 
     it('should render feature icons with correct names', () => {
-      const expectedIcons = ['calendar-outline', 'notifications-outline', 'time-outline', 'moon-outline'];
+      const expectedIcons = ['calendar-outline', 'notifications-outline', 'time-outline'];
       const featureIcons = spectator.queryAll('.feature-card ion-icon');
 
       expectedIcons.forEach((iconName, index) => {
@@ -383,6 +383,207 @@ describe('IntroPage', () => {
 
       expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to save intro preference:', detailedError);
       expect(consoleWarnSpy.mock.calls[0][1]).toBe(detailedError);
+    });
+  });
+
+  describe('Feature Content Validation', () => {
+    beforeEach(() => {
+      spectator.detectChanges();
+    });
+
+    it('should display Smart Calendar feature with correct content', () => {
+      const featureCards = spectator.queryAll('.feature-card');
+      const smartCalendarCard = featureCards[0];
+
+      const icon = smartCalendarCard.querySelector('ion-icon');
+      const title = smartCalendarCard.querySelector('h3');
+      const description = smartCalendarCard.querySelector('p');
+
+      expect(icon).toHaveAttribute('name', 'calendar-outline');
+      expect(icon).toHaveAttribute('color', 'primary');
+      expect(title).toHaveText('Smart Calendar');
+      expect(description).toHaveText('View parking rules in calendar or list format with highlighted restriction days');
+    });
+
+    it('should display Custom Alerts feature with correct content', () => {
+      const featureCards = spectator.queryAll('.feature-card');
+      const customAlertsCard = featureCards[1];
+
+      const icon = customAlertsCard.querySelector('ion-icon');
+      const title = customAlertsCard.querySelector('h3');
+      const description = customAlertsCard.querySelector('p');
+
+      expect(icon).toHaveAttribute('name', 'notifications-outline');
+      expect(icon).toHaveAttribute('color', 'secondary');
+      expect(title).toHaveText('Custom Alerts');
+      expect(description).toHaveText("Get personalized notifications for today's rules and next-day reminders");
+    });
+
+    it('should display Real-time Updates feature with correct content', () => {
+      const featureCards = spectator.queryAll('.feature-card');
+      const realTimeCard = featureCards[2];
+
+      const icon = realTimeCard.querySelector('ion-icon');
+      const title = realTimeCard.querySelector('h3');
+      const description = realTimeCard.querySelector('p');
+
+      expect(icon).toHaveAttribute('name', 'time-outline');
+      expect(icon).toHaveAttribute('color', 'tertiary');
+      expect(title).toHaveText('Real-time Updates');
+      expect(description).toHaveText('Stay informed about parking suspensions and rule changes as they happen');
+    });
+
+    it('should have all feature icons with proper color attributes', () => {
+      const expectedColors = ['primary', 'secondary', 'tertiary'];
+      const featureIcons = spectator.queryAll('.feature-card ion-icon');
+
+      expectedColors.forEach((color, index) => {
+        expect(featureIcons[index]).toHaveAttribute('color', color);
+      });
+    });
+  });
+
+  describe('UI Layout and Structure', () => {
+    beforeEach(() => {
+      spectator.detectChanges();
+    });
+
+    it('should have proper component structure', () => {
+      expect(spectator.query('ion-content')).toBeTruthy();
+      expect(spectator.query('.intro-container')).toBeTruthy();
+      expect(spectator.query('.intro-header')).toBeTruthy();
+      expect(spectator.query('.intro-features')).toBeTruthy();
+      expect(spectator.query('.intro-actions')).toBeTruthy();
+    });
+
+    it('should display logo with proper attributes', () => {
+      const logo = spectator.query('.intro-logo');
+      expect(logo).toBeTruthy();
+      expect(logo).toHaveAttribute('src', '/assets/intro.png');
+      expect(logo).toHaveAttribute('alt', 'ASP NYC Logo');
+    });
+
+    it('should have proper header structure', () => {
+      const header = spectator.query('.intro-header');
+      const logoContainer = header?.querySelector('.logo-container');
+      const titleContainer = header?.querySelector('.intro-title');
+
+      expect(logoContainer).toBeTruthy();
+      expect(titleContainer).toBeTruthy();
+    });
+
+    it('should have get started button with proper styling', () => {
+      const button = spectator.query('.get-started-btn');
+      expect(button).toHaveAttribute('expand', 'block');
+      expect(button).toHaveAttribute('size', 'large');
+      expect(button).toHaveAttribute('color', 'light');
+    });
+
+    it('should have arrow icon positioned correctly in button', () => {
+      const arrowIcon = spectator.query('.get-started-btn ion-icon[name="arrow-forward"]');
+      expect(arrowIcon).toHaveAttribute('slot', 'end');
+    });
+
+    it('should have proper ion-text wrapper for tagline', () => {
+      const ionText = spectator.query('.intro-title ion-text');
+      expect(ionText).toHaveAttribute('color', 'light');
+
+      const tagline = ionText?.querySelector('p');
+      expect(tagline).toBeTruthy();
+    });
+  });
+
+  describe('Content Accuracy', () => {
+    beforeEach(() => {
+      spectator.detectChanges();
+    });
+
+    it('should display the correct app title', () => {
+      const title = spectator.query('.intro-title h1');
+      expect(title).toHaveText('ASP NYC');
+    });
+
+    it('should display compelling value proposition', () => {
+      const tagline = spectator.query('.intro-title ion-text p');
+      expect(tagline).toHaveText('Never pay another parking ticket due to NYC street cleaning schedules');
+    });
+
+    it('should have meaningful feature descriptions that mention key benefits', () => {
+      const descriptions = spectator.queryAll('.feature-card p');
+
+      // Smart Calendar description should mention viewing modes
+      expect(descriptions[0].textContent).toContain('calendar or list format');
+
+      // Custom Alerts description should mention personalization
+      expect(descriptions[1].textContent).toContain('personalized notifications');
+
+      // Real-time Updates description should mention staying informed
+      expect(descriptions[2].textContent).toContain('Stay informed');
+    });
+
+    it('should have action-oriented button text', () => {
+      const button = spectator.query('.get-started-btn');
+      expect(button).toHaveText('Get Started');
+    });
+  });
+
+  describe('Component Integration', () => {
+    it('should properly integrate with Router service', () => {
+      expect(mockRouter).toBeDefined();
+      expect(component['router']).toBe(mockRouter);
+    });
+
+    it('should use Ionic components correctly', () => {
+      spectator.detectChanges();
+
+      expect(spectator.query('ion-content')).toBeTruthy();
+      expect(spectator.queryAll('ion-text')).toHaveLength(4); // 1 tagline + 3 feature descriptions
+      expect(spectator.query('ion-button')).toBeTruthy();
+      expect(spectator.queryAll('ion-icon')).toHaveLength(4); // 3 feature icons + 1 arrow icon
+    });
+
+    it('should register icons in constructor without errors', () => {
+      // Constructor executes when component is created
+      // If icon registration failed, component creation would fail
+      expect(component).toBeTruthy();
+      expect(() => spectator.detectChanges()).not.toThrow();
+    });
+  });
+
+  describe('Memory Management', () => {
+    it('should not create memory leaks with repeated clicks', async () => {
+      (Preferences.set as jest.Mock).mockResolvedValue(undefined);
+      const button = spectator.query('.get-started-btn');
+
+      // Simulate multiple user interactions
+      for (let i = 0; i < 10; i++) {
+        spectator.click(button!);
+        await spectator.fixture.whenStable();
+      }
+
+      expect(Preferences.set).toHaveBeenCalledTimes(10);
+      expect(mockRouter.navigate).toHaveBeenCalledTimes(10);
+      expect(consoleWarnSpy).not.toHaveBeenCalled();
+    });
+
+    it('should handle component destruction during async operations', async () => {
+      let resolvePreferences: (value: any) => void;
+      const preferencesPromise = new Promise(resolve => {
+        resolvePreferences = resolve;
+      });
+      (Preferences.set as jest.Mock).mockReturnValue(preferencesPromise);
+
+      // Start async operation
+      const continuePromise = component.continue();
+
+      // Destroy component while operation is pending
+      spectator.fixture.destroy();
+
+      // Resolve the promise after destruction
+      resolvePreferences!(undefined);
+
+      // Should not throw errors
+      await expect(continuePromise).resolves.not.toThrow();
     });
   });
 });

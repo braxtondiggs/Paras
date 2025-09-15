@@ -15,6 +15,20 @@ import { processNotificationBody } from '../utils/text';
 import { isValidNotificationToken, shouldSendNotification } from '../utils/validation';
 
 /**
+ * Extended Firebase Messaging Error that may include pending batch responses
+ */
+interface ExtendedFirebaseMessagingError extends FirebaseMessagingError {
+  pendingBatchResponse?: Promise<BatchResponse>;
+}
+
+/**
+ * Type guard to check if error has pending batch response
+ */
+function hasPendingBatchResponse(error: FirebaseMessagingError): error is ExtendedFirebaseMessagingError {
+  return 'pendingBatchResponse' in error;
+}
+
+/**
  * Service for managing push notifications via Firebase Cloud Messaging
  */
 export class NotificationService {
@@ -135,11 +149,13 @@ export class NotificationService {
     });
 
     // Check if it's a session error with pending responses
-    if ('pendingBatchResponse' in error) {
+    if (hasPendingBatchResponse(error)) {
       logger.info('Processing pending batch response from session error');
       try {
-        const pendingResponse = await (error as any).pendingBatchResponse;
-        await this.handleBatchResponse(pendingResponse, tokens, snapshots);
+        const pendingResponse = await error.pendingBatchResponse;
+        if (pendingResponse) {
+          await this.handleBatchResponse(pendingResponse, tokens, snapshots);
+        }
       } catch (pendingError) {
         logger.error('Failed to process pending batch response:', pendingError);
       }

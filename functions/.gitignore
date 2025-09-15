@@ -7,3 +7,12 @@ typings/
 
 node_modules/
 lib/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Firebase service account keys
+service-account-key.json
+*-service-account-key.json
