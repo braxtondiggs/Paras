@@ -8,6 +8,34 @@ $card-active-background: #dbe2ef;
 $text-color: #393e46;
 $main-color: color.adjust($card-border, $lightness: -30%);
 
+// Make ion-item background transparent to match page background
+ion-item {
+  --background: transparent;
+  --color: var(--ion-text-color);
+}
+
+// Enhanced accessibility and interaction
+.calendar-day {
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    background-color: color.adjust($card-background, $lightness: -5%);
+  }
+
+  &:focus {
+    outline: 2px solid var(--ion-color-primary, #0066cc);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
 .calendar-swiper-container {
   display: flex;
   padding: 0 4px;
@@ -27,11 +55,11 @@ $main-color: color.adjust($card-border, $lightness: -30%);
     --opacity: 0.8;
 
     &.start {
-      left: 0;
+      left: -10px;
     }
 
     &.end {
-      right: 0;
+      right: -10px;
     }
   }
 }
@@ -95,5 +123,57 @@ $main-color: color.adjust($card-border, $lightness: -30%);
     position: absolute;
     transform: translate(-50%, 0);
     width: 6px;
+  }
+}
+
+// Card detail container with smooth transitions
+.card-detail-container {
+  transition:
+    opacity 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
+
+  &.loading {
+    opacity: 0.7;
+    transform: translateY(2px);
+  }
+}
+
+// Smooth transitions for card detail changes
+app-card-detail {
+  display: block;
+  transition: all 0.15s ease-out;
+
+  &:not(.ng-animating) {
+    animation: none;
+  }
+}
+
+// Dark mode styles
+@media (prefers-color-scheme: dark) {
+  .swiper-slide {
+    background-color: var(--ion-color-step-50, #1e1e1e);
+    border-color: var(--ion-color-step-150, #404040);
+
+    &.swiper-slide-active {
+      background-color: var(--ion-color-step-100, #2a2a2a);
+    }
+
+    .day-number {
+      color: var(--ion-text-color, #ffffff);
+    }
+
+    .day-short {
+      color: var(--ion-text-color, #ffffff);
+    }
+  }
+
+  .calendar-day {
+    &:hover {
+      background-color: var(--ion-color-step-75, #262626);
+    }
+
+    &:focus {
+      outline-color: var(--ion-color-primary-tint, #4d8dff);
+    }
   }
 }

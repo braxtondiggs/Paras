@@ -10,7 +10,7 @@
 }
 
 <!-- Calendar Content -->
-@if (!isLoading() && !hasError()) {
+@if (!hasError()) {
   <!-- Calendar Header -->
   @if (active(); as activeItem) {
     <ion-item lines="none" class="ion-text-center">
@@ -40,30 +40,50 @@
               'is-today': isToday(item)
             }"
             (click)="slideTo(i)"
-            (keyup.enter)="slideTo(i)"
-            class="ion-activatable ripple-parent"
+            (keydown.enter)="slideTo(i)"
+            (keydown.space)="slideTo(i)"
+            [attr.aria-label]="'Select ' + item.day.long + ' ' + item.day.num"
+            [attr.role]="'button'"
+            [attr.tabindex]="0"
+            class="ion-activatable ripple-parent calendar-day"
           >
             <div class="day-short">{{ item.day.short }}</div>
             <div class="day-number">{{ item.day.num }}</div>
             @if (hasNotice(item, feeds())) {
-              <div class="notice-indicator"></div>
+              <div class="notice-indicator" aria-hidden="true"></div>
             }
             <ion-ripple-effect></ion-ripple-effect>
           </div>
         </swiper-slide>
       }
     </swiper-container>
-    <ion-button fill="clear" color="dark" class="end action-btn" (click)="slideNext()">
+
+    <!-- Navigation buttons with improved accessibility -->
+    <ion-button
+      fill="clear"
+      color="dark"
+      class="end action-btn"
+      (click)="slideNext()"
+      [disabled]="!canNavigate()"
+      aria-label="Next dates"
+    >
       <ion-icon slot="icon-only" name="arrow-forward"></ion-icon>
     </ion-button>
-    <ion-button fill="clear" color="dark" class="start action-btn" (click)="slidePrev()">
+    <ion-button
+      fill="clear"
+      color="dark"
+      class="start action-btn"
+      (click)="slidePrev()"
+      [disabled]="!canNavigate()"
+      aria-label="Previous dates"
+    >
       <ion-icon slot="icon-only" name="arrow-back"></ion-icon>
     </ion-button>
   </div>
 
   <!-- Selected Date Details -->
-  @if (selected(); as selectedItem) {
-    <div class="ion-padding-top ion-padding-horizontal">
+  @if (stableSelected(); as selectedItem) {
+    <div class="ion-padding-top ion-padding-horizontal card-detail-container">
       <app-card-detail [item]="selectedItem"></app-card-detail>
     </div>
   }

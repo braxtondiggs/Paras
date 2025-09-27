@@ -1,9 +1,11 @@
 <div class="card-container" [attr.aria-busy]="isLoading()">
   @if (isLoading()) {
     <ion-card>
-      <ion-card-header>
-        <ion-skeleton-text animated style="width: 60%; height: 20px"></ion-skeleton-text>
-        <ion-skeleton-text animated style="width: 24px; height: 24px; border-radius: 50%"></ion-skeleton-text>
+      <ion-card-header class="skeleton-header">
+        <div class="skeleton-header-content">
+          <ion-skeleton-text animated style="width: 50%; height: 18px"></ion-skeleton-text>
+          <ion-skeleton-text animated style="width: 80px; height: 24px; border-radius: 12px"></ion-skeleton-text>
+        </div>
       </ion-card-header>
       <ion-card-content>
         <ion-skeleton-text animated style="width: 100%; height: 16px"></ion-skeleton-text>
@@ -14,14 +16,13 @@
   } @else if (detail()) {
     <ion-card class="parking-card" [class]="'status-' + (detail()?.active ? 'active' : 'inactive')">
       <ion-card-header [color]="statusColor()" class="card-header">
-        <div class="date-section">
-          <ion-icon name="calendar-outline" class="date-icon"></ion-icon>
-          <span class="date" [attr.aria-label]="'Date: ' + detail()?.date">{{ detail()?.date }}</span>
-        </div>
-        <div class="status-section">
+        <div class="header-content">
+          <div class="date-section">
+            <ion-icon name="calendar-outline" class="date-icon"></ion-icon>
+            <span class="date" [attr.aria-label]="'Date: ' + detail()?.date">{{ detail()?.date }}</span>
+          </div>
           <ion-badge [color]="statusColor()" class="status-badge">
             <ion-icon [name]="statusIcon()" class="status-icon"></ion-icon>
-            <span class="status-text">{{ statusText() }}</span>
           </ion-badge>
         </div>
       </ion-card-header>
@@ -32,8 +33,8 @@
             <ion-icon name="car-outline" slot="start" class="item-icon"></ion-icon>
             <ion-text>
               <h3 class="info-label">Alternate Side Parking</h3>
-              <p class="info-value" [class]="detail()?.active ? 'text-danger' : 'text-success'">
-                {{ detail()?.active ? 'In Effect' : 'Suspended' }}
+              <p class="info-value" [class]="parkingStatus().class">
+                {{ parkingStatus().text }}
               </p>
             </ion-text>
           </ion-item>
@@ -42,8 +43,8 @@
             <ion-icon name="time-outline" slot="start" class="item-icon"></ion-icon>
             <ion-text>
               <h3 class="info-label">Parking Meters</h3>
-              <p class="info-value" [class]="detail()?.metered ? 'text-warning' : 'text-success'">
-                {{ detail()?.metered ? 'In Effect' : 'Not in Effect' }}
+              <p class="info-value" [class]="meterStatus().class">
+                {{ meterStatus().text }}
               </p>
             </ion-text>
           </ion-item>
@@ -54,16 +55,6 @@
               <ion-text>
                 <h3 class="info-label">Reason for Suspension</h3>
                 <p class="info-value reason-text">{{ detail()?.reason }}</p>
-              </ion-text>
-            </ion-item>
-          }
-
-          @if (detail()?.text) {
-            <ion-item class="info-item description-item">
-              <ion-icon name="document-text-outline" slot="start" class="item-icon"></ion-icon>
-              <ion-text>
-                <h3 class="info-label">Additional Information</h3>
-                <p class="info-value description-text">{{ detail()?.text }}</p>
               </ion-text>
             </ion-item>
           }

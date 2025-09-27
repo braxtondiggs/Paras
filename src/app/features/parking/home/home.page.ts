@@ -21,6 +21,7 @@ import {
   IonHeader,
   IonIcon,
   IonRouterLink,
+  IonSpinner,
   IonTitle,
   IonToolbar,
   ModalController,
@@ -28,12 +29,50 @@ import {
 } from '@ionic/angular/standalone';
 import { HorizontalCalendarComponent } from '@shared/components/horizontal-calendar/horizontal-calendar.component';
 import { ModalDetailComponent } from '@shared/components/modal-detail/modal-detail.component';
-import dayjs, { Dayjs } from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { addIcons } from 'ionicons';
 import { calendarOutline, settingsOutline } from 'ionicons/icons';
-import { lastValueFrom } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
+import { catchError, take } from 'rxjs/operators';
 
+// Types and interfaces
+interface FeedQueryParams {
+  startDate: Dayjs;
+  endDate: Dayjs;
+  type: 'NYC';
+}
+
+interface HighlightedDate {
+  date: string;
+  backgroundColor: string;
+  textColor: string;
+}
+
+// Constants
+const HOME_CONFIG = {
+  SLIDE_TRANSITION_DURATION: 300,
+  DATE_FORMAT: 'YYYY-MM-DD',
+  HIGHLIGHTED_DATE_STYLES: {
+    backgroundColor: '#f38181',
+    textColor: '#fff'
+  },
+  SLIDES: {
+    CALENDAR: 0,
+    DATETIME: 1
+  }
+} as const;
+
+const ROUTE_PATHS = {
+  HOME: '/home',
+  HOME_CALENDAR: '/home/calendar',
+  SETTINGS: '/settings'
+} as const;
+
+/**
+ * Home page component for ASP NYC application.
+ * Provides two views: horizontal calendar and datetime picker.
+ * Manages parking feed data and navigation between views.
+ */
 @Component({
   imports: [
     HorizontalCalendarComponent,
@@ -44,6 +83,7 @@ import { take } from 'rxjs/operators';
     IonHeader,
     IonIcon,
     IonRouterLink,
+    IonSpinner,
     IonTitle,
     IonToolbar,
     RouterLink
@@ -56,94 +96,172 @@ import { take } from 'rxjs/operators';
   templateUrl: './home.page.html'
 })
 export class HomePage implements AfterViewInit {
-  private readonly feed = inject(FeedService);
-  private readonly modal = inject(ModalController);
+  // Dependencies
+  private readonly feedService = inject(FeedService);
+  private readonly modalController = inject(ModalController);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
+  // Signals
   readonly selectedDate = signal(dayjs().startOf('day').toISOString());
   readonly items = signal<Feed[]>([]);
-  readonly activeSlide = signal(0);
+  readonly activeSlide = signal<0 | 1>(HOME_CONFIG.SLIDES.CALENDAR);
   readonly maxDate = signal(dayjs().endOf('year').toISOString());
+  readonly isLoading = signal(false);
 
+  // Computed properties
   readonly minDate = computed(() => dayjs().startOf('year').toISOString());
-  readonly highlightedDates = computed(() =>
-    this.items().map(o => ({
-      date: dayjs(o.date.toDate()).format('YYYY-MM-DD'),
-      backgroundColor: '#f38181',
-      textColor: '#fff'
+
+  readonly highlightedDates = computed((): HighlightedDate[] =>
+    this.items().map(item => ({
+      date: dayjs(item.date.toDate()).format(HOME_CONFIG.DATE_FORMAT),
+      backgroundColor: HOME_CONFIG.HIGHLIGHTED_DATE_STYLES.backgroundColor,
+      textColor: HOME_CONFIG.HIGHLIGHTED_DATE_STYLES.textColor
     }))
   );
+
+  readonly isCalendarView = computed(() => this.activeSlide() === HOME_CONFIG.SLIDES.CALENDAR);
+  readonly isDateTimeView = computed(() => this.activeSlide() === HOME_CONFIG.SLIDES.DATETIME);
 
   @ViewChild('swiper', { static: false }) swiper?: ElementRef | undefined;
   @ViewChild('calendar', { read: ElementRef, static: false }) calendar?: ElementRef;
 
   constructor() {
-    this.activeSlide.set(this.router.url.includes('calendar') ? 1 : 0);
-    addIcons({ calendarOutline, settingsOutline });
+    this.registerIcons();
   }
 
-  async onChange({ detail }: CustomEvent<PickerColumnOption>) {
-    this.selectedDate.set(dayjs().toISOString());
-    const { value } = detail;
-    const date = dayjs(value);
-    const item = this.items().find(o => dayjs(o.date.toDate()).isSame(date, 'day')) ?? dayjs(date.toString());
-    const modal = await this.modal.create({
-      component: ModalDetailComponent,
-      cssClass: 'fullscreen',
-      componentProps: {
-        item
-      }
-    });
-    return await modal.present();
+  /**
+   * Handles date selection from the datetime picker.
+   * Opens modal with parking information for selected date.
+   */
+  async onChange({ detail }: CustomEvent<PickerColumnOption>): Promise<void> {
+    try {
+      const { value } = detail;
+      const selectedDate = dayjs(value);
+
+      // Update selected date
+      this.selectedDate.set(selectedDate.toISOString());
+
+      // Find matching feed item or use selected date
+      const feedItem = this.items().find(item => dayjs(item.date.toDate()).isSame(selectedDate, 'day'));
+
+      const modalData = feedItem || selectedDate;
+
+      const modal = await this.modalController.create({
+        component: ModalDetailComponent,
+        cssClass: 'fullscreen',
+        componentProps: { item: modalData }
+      });
+
+      await modal.present();
+    } catch (error) {
+      console.error('Error handling date change:', error);
+    }
   }
 
   async ngAfterViewInit(): Promise<void> {
-    await this.getLastDate();
-    this.getData(dayjs(this.minDate()), dayjs(this.maxDate()));
+    await this.initializeData();
+    this.initializeComponent();
   }
 
-  switchCalenderView() {
-    const newSlide = this.activeSlide() ? 0 : 1;
-    this.activeSlide.set(newSlide);
+  /**
+   * Toggles between calendar and datetime picker views.
+   * Updates swiper position and route accordingly.
+   */
+  switchCalenderView(): void {
+    const newSlide =
+      this.activeSlide() === HOME_CONFIG.SLIDES.CALENDAR ? HOME_CONFIG.SLIDES.DATETIME : HOME_CONFIG.SLIDES.CALENDAR;
+
+    this.activeSlide.set(newSlide as 0 | 1);
 
     // Smooth transition to new slide
-    const swiperInstance = this.swiper?.nativeElement?.swiper;
+    const swiperInstance = this.getSwiperInstance();
     if (swiperInstance) {
-      swiperInstance.slideTo(newSlide, 300); // 300ms transition
+      swiperInstance.slideTo(newSlide, HOME_CONFIG.SLIDE_TRANSITION_DURATION);
     }
 
     // Update route to reflect current view
-    this.router.navigate([`/home${newSlide ? '/calendar' : ''}`], {
-      replaceUrl: true
-    });
+    this.navigateToRoute(newSlide === HOME_CONFIG.SLIDES.DATETIME);
   }
 
-  private getData(start: Dayjs, end: Dayjs) {
-    this.feed
-      .getFeeds({
-        startDate: start,
-        endDate: end,
-        type: 'NYC'
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((items: Feed[]) => {
-        console.warn('🔥 Fetched feed items:', items.length);
-        this.items.set(items);
+  private initializeComponent(): void {
+    const isCalendarRoute = this.router.url.includes('calendar');
+    const initialSlide = isCalendarRoute ? HOME_CONFIG.SLIDES.DATETIME : HOME_CONFIG.SLIDES.CALENDAR;
+    this.activeSlide.set(initialSlide as 0 | 1);
+
+    const swiperInstance = this.getSwiperInstance();
+    if (swiperInstance) {
+      swiperInstance.slideTo(initialSlide as 0 | 1);
+    }
+  }
+
+  private registerIcons(): void {
+    addIcons({ calendarOutline, settingsOutline });
+  }
+
+  private async initializeData(): Promise<void> {
+    await this.getLastDate();
+    this.loadFeedData(dayjs(this.minDate()), dayjs(this.maxDate()));
+  }
+
+  private loadFeedData(start: Dayjs, end: Dayjs): void {
+    this.isLoading.set(true);
+
+    const queryParams: FeedQueryParams = {
+      startDate: start,
+      endDate: end,
+      type: 'NYC'
+    };
+
+    this.feedService
+      .getFeeds(queryParams)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        catchError(error => {
+          console.error('Error fetching feed data:', error);
+          return [];
+        })
+      )
+      .subscribe({
+        next: (items: Feed[]) => {
+          console.warn('🔥 Fetched feed items:', items.length);
+          this.items.set(items);
+          this.isLoading.set(false);
+        },
+        error: error => {
+          console.error('Error in feed subscription:', error);
+          this.isLoading.set(false);
+        }
       });
   }
 
-  private async getLastDate() {
+  private getSwiperInstance() {
+    return this.swiper?.nativeElement?.swiper;
+  }
+
+  private navigateToRoute(isCalendarView: boolean): void {
+    const route = isCalendarView ? ROUTE_PATHS.HOME_CALENDAR : ROUTE_PATHS.HOME;
+    this.router.navigate([route], { replaceUrl: true });
+  }
+
+  private async getLastDate(): Promise<void> {
     try {
-      const lastFeed = await lastValueFrom(this.feed.getLastDate().pipe(take(1)));
+      const lastFeed = await firstValueFrom(
+        this.feedService.getLastDate().pipe(
+          take(1),
+          catchError(() => [null])
+        )
+      );
+
+      const fallbackDate = dayjs().endOf('month').subtract(1, 'day').toISOString();
+
       if (lastFeed?.date) {
         this.maxDate.set(dayjs(lastFeed.date.toDate()).endOf('month').subtract(1, 'day').toISOString());
       } else {
-        this.maxDate.set(dayjs().endOf('month').subtract(1, 'day').toISOString());
+        this.maxDate.set(fallbackDate);
       }
     } catch (error) {
       console.error('Error fetching last date:', error);
-      // Fallback to current month on error
       this.maxDate.set(dayjs().endOf('month').subtract(1, 'day').toISOString());
     }
   }

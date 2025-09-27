@@ -3,19 +3,23 @@
   border-radius: 12px;
 
   &.status-active {
-    border-left: 4px solid var(--ion-color-danger);
+    border-left: 4px solid var(--ion-color-primary);
   }
 
   &.status-inactive {
-    border-left: 4px solid var(--ion-color-success);
+    border-left: 4px solid var(--ion-color-danger);
   }
 }
 
 .card-header {
   padding: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
 
   .date-section {
     display: flex;
@@ -29,12 +33,25 @@
   }
 }
 
+// Skeleton header styles
+.skeleton-header {
+  padding: 16px;
+
+  .skeleton-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
 .status-badge {
-  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
   border-radius: 16px;
+  display: flex;
+  font-size: 20px;
+  gap: 6px;
+  padding: 6px 0 6px 12px;
 
   .status-text {
     font-size: 12px;
@@ -64,15 +81,15 @@
       font-weight: 500;
 
       &.text-success {
-        color: var(--ion-color-success);
+        color: var(--ion-color-primary);
       }
 
       &.text-danger {
         color: var(--ion-color-danger);
       }
 
-      &.text-warning {
-        color: var(--ion-color-warning);
+      &.text-secondary {
+        color: var(--ion-color-secondary);
       }
     }
   }
@@ -93,7 +110,7 @@
 .updated-info {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 6px;
   padding: 12px 16px;
 

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import {
   IonBadge,
   IonCard,
@@ -18,18 +18,25 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { addIcons } from 'ionicons';
 import {
   calendarOutline,
+  carOutline,
   checkmarkCircleOutline,
   closeCircleOutline,
-  timeOutline,
-  carOutline,
+  documentOutline,
   informationCircleOutline,
-  documentTextOutline,
   refreshOutline,
-  documentOutline
+  timeOutline
 } from 'ionicons/icons';
 
 import { type Feed } from '@core/types/firestore.types';
 
+// Type definitions for better type safety
+type CardDetailInput = Feed | Dayjs;
+
+type StatusColor = 'success' | 'danger' | 'primary' | 'medium';
+
+type StatusIconName = 'checkmark-circle-outline' | 'close-circle-outline' | 'time-outline';
+
+// Enhanced view model with better type definitions
 interface CardDetailViewModel {
   readonly active: boolean;
   readonly created: string;
@@ -41,7 +48,14 @@ interface CardDetailViewModel {
   readonly type?: string;
 }
 
-type CardDetailInput = Feed | Dayjs;
+// Constants for better maintainability
+const CARD_CONFIG = {
+  DATE_FORMAT: 'MMMM Do YYYY',
+  METERS_IN_EFFECT: 'In Effect',
+  METERS_NOT_IN_EFFECT: 'Not in Effect',
+  DEFAULT_ACTIVE_STATE: true,
+  DEFAULT_METERED_STATE: true
+} as const;
 
 @Component({
   standalone: true,
@@ -55,65 +69,16 @@ type CardDetailInput = Feed | Dayjs;
     'aria-label': 'Parking details card'
   }
 })
-export class CardDetailComponent implements OnInit {
+export class CardDetailComponent {
   readonly item = input<CardDetailInput>();
-  readonly isLoading = signal(false);
+  readonly isLoading = signal<boolean>(false);
 
-  readonly detail = computed((): CardDetailViewModel | undefined => {
-    const currentItem = this.item();
-    if (!currentItem) return undefined;
-
-    if (!dayjs.isDayjs(currentItem)) {
-      const feedItem = currentItem as Feed;
-      const dateValue = dayjs(feedItem.date.toDate());
-      const createdValue = dayjs(feedItem.created.toDate());
-
-      return {
-        active: feedItem.active,
-        created: createdValue.fromNow(),
-        date: dateValue.format('MMMM Do YYYY'),
-        metered: feedItem.metered,
-        lastUpdated: dateValue.isSame(dayjs(), 'day') || dateValue.isSame(dayjs().add(1, 'day'), 'day'),
-        reason: feedItem.reason,
-        text: feedItem.text,
-        type: feedItem.type
-      } satisfies CardDetailViewModel;
-    } else {
-      const dayjsItem = currentItem as Dayjs;
-      return {
-        active: true,
-        created: dayjsItem.fromNow(),
-        date: dayjsItem.format('MMMM Do YYYY'),
-        metered: true,
-        lastUpdated: dayjsItem.isSame(dayjs(), 'day'),
-        reason: undefined,
-        text: undefined,
-        type: undefined
-      } satisfies CardDetailViewModel;
-    }
-  });
-
-  readonly statusColor = computed(() => {
-    const currentDetail = this.detail();
-    if (!currentDetail) return 'medium';
-    return currentDetail.active ? 'success' : 'danger';
-  });
-
-  readonly statusIcon = computed(() => {
-    const currentDetail = this.detail();
-    if (!currentDetail) return 'time-outline';
-    return currentDetail.active ? 'checkmark-circle-outline' : 'close-circle-outline';
-  });
-
-  readonly statusText = computed(() => {
-    const currentDetail = this.detail();
-    if (!currentDetail) return 'Unknown';
-    return currentDetail.active ? 'In Effect' : 'Suspended';
-  });
-
-  ngOnInit(): void {
+  constructor() {
+    // Initialize dayjs plugins and icons once
     dayjs.extend(relativeTime);
     dayjs.extend(advancedFormat);
+
+    // Register all icons at once for better performance
     addIcons({
       closeCircleOutline,
       checkmarkCircleOutline,
@@ -121,9 +86,100 @@ export class CardDetailComponent implements OnInit {
       calendarOutline,
       carOutline,
       informationCircleOutline,
-      documentTextOutline,
       refreshOutline,
       documentOutline
     });
   }
+
+  readonly detail = computed((): CardDetailViewModel | undefined => {
+    const currentItem = this.item();
+    if (!currentItem) return undefined;
+
+    return this.createViewModel(currentItem);
+  });
+
+  /**
+   * Create view model from input data
+   */
+  private createViewModel(item: CardDetailInput): CardDetailViewModel {
+    if (dayjs.isDayjs(item)) {
+      return this.createDayjsViewModel(item);
+    }
+
+    return this.createFeedViewModel(item);
+  }
+
+  /**
+   * Create view model from Feed data
+   */
+  private createFeedViewModel(feedItem: Feed): CardDetailViewModel {
+    const dateValue = dayjs(feedItem.date.toDate());
+    const createdValue = dayjs(feedItem.created.toDate());
+
+    return {
+      active: feedItem.active,
+      created: createdValue.fromNow(),
+      date: dateValue.format(CARD_CONFIG.DATE_FORMAT),
+      metered: feedItem.metered,
+      lastUpdated: this.isRecentlyUpdated(dateValue),
+      reason: feedItem.reason,
+      text: feedItem.text,
+      type: feedItem.type
+    };
+  }
+
+  /**
+   * Create view model from Dayjs data
+   */
+  private createDayjsViewModel(dayjsItem: Dayjs): CardDetailViewModel {
+    return {
+      active: CARD_CONFIG.DEFAULT_ACTIVE_STATE,
+      created: dayjsItem.fromNow(),
+      date: dayjsItem.format(CARD_CONFIG.DATE_FORMAT),
+      metered: CARD_CONFIG.DEFAULT_METERED_STATE,
+      lastUpdated: dayjsItem.isSame(dayjs(), 'day'),
+      reason: undefined,
+      text: undefined,
+      type: undefined
+    };
+  }
+
+  /**
+   * Check if date is recently updated (today or tomorrow)
+   */
+  private isRecentlyUpdated(date: Dayjs): boolean {
+    return date.isSame(dayjs(), 'day') || date.isSame(dayjs().add(1, 'day'), 'day');
+  }
+
+  readonly statusColor = computed((): StatusColor => {
+    const currentDetail = this.detail();
+    if (!currentDetail) return 'medium';
+    return currentDetail.active ? 'primary' : 'danger';
+  });
+
+  readonly statusIcon = computed((): StatusIconName => {
+    const currentDetail = this.detail();
+    if (!currentDetail) return 'time-outline';
+    return currentDetail.active ? 'checkmark-circle-outline' : 'close-circle-outline';
+  });
+
+  readonly parkingStatus = computed(() => {
+    const currentDetail = this.detail();
+    if (!currentDetail) return { text: 'Unknown', class: 'text-medium' };
+
+    return {
+      text: currentDetail.active ? 'In Effect' : 'Suspended',
+      class: currentDetail.active ? 'text-success' : 'text-danger'
+    };
+  });
+
+  readonly meterStatus = computed(() => {
+    const currentDetail = this.detail();
+    if (!currentDetail) return { text: 'Unknown', class: 'text-medium' };
+
+    return {
+      text: currentDetail.metered ? CARD_CONFIG.METERS_IN_EFFECT : CARD_CONFIG.METERS_NOT_IN_EFFECT,
+      class: currentDetail.metered ? 'text-success' : 'text-danger'
+    };
+  });
 }

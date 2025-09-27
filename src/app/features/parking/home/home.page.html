@@ -2,23 +2,36 @@
   <ion-toolbar>
     <ion-title>ASP NYC</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="switchCalenderView()">
-        <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+      <ion-button
+        (click)="switchCalenderView()"
+        [attr.aria-label]="isCalendarView() ? 'Switch to date picker' : 'Switch to calendar'"
+        fill="clear"
+      >
+        <ion-icon slot="icon-only" name="calendar-outline" aria-hidden="true"></ion-icon>
       </ion-button>
-      <ion-button routerLink="/settings">
-        <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
+      <ion-button routerLink="/settings" aria-label="Open settings" fill="clear">
+        <ion-icon slot="icon-only" name="settings-outline" aria-hidden="true"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
+
 <ion-content fullscreen>
-  <swiper-container #swiper [allowTouchMove]="false" [initialSlide]="activeSlide()">
-    <swiper-slide>
+  <swiper-container
+    #swiper
+    [allowTouchMove]="false"
+    role="tabpanel"
+    [attr.aria-label]="isCalendarView() ? 'Calendar view' : 'Date picker view'"
+  >
+    <!-- Calendar Slide -->
+    <swiper-slide role="tabpanel" aria-label="Horizontal calendar view">
       <div class="ion-padding-horizontal">
         <app-horizontal-calendar />
       </div>
     </swiper-slide>
-    <swiper-slide>
+
+    <!-- DateTime Picker Slide -->
+    <swiper-slide role="tabpanel" aria-label="Date picker view">
       <div class="ion-padding">
         <ion-datetime
           #calendar
@@ -26,11 +39,19 @@
           [min]="minDate()"
           [max]="maxDate()"
           [highlightedDates]="highlightedDates()"
+          [disabled]="isLoading()"
           (ionChange)="onChange($event)"
           size="cover"
           mode="md"
           presentation="date"
+          aria-label="Select a date to view parking information"
         />
+
+        @if (isLoading()) {
+          <div class="loading-overlay" aria-live="polite" aria-label="Loading data">
+            <ion-spinner name="crescent"></ion-spinner>
+          </div>
+        }
       </div>
     </swiper-slide>
   </swiper-container>
