@@ -71,6 +71,10 @@ ion-item {
   display: flex;
   height: 45px;
   overflow: hidden;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+
   > div {
     display: flex;
     flex: 1;
@@ -148,8 +152,8 @@ app-card-detail {
   }
 }
 
-// Dark mode styles
-@media (prefers-color-scheme: dark) {
+// Dark mode styles - use :host-context to work with component encapsulation
+:host-context(body.dark) {
   .swiper-slide {
     background-color: var(--ion-color-step-50, #1e1e1e);
     border-color: var(--ion-color-step-150, #404040);

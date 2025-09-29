@@ -13,7 +13,8 @@
       "Bash(npm info:*)",
       "Bash(npm test)",
       "WebSearch",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

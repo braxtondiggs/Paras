@@ -178,14 +178,4 @@ export class FeedService extends BaseFirestoreService<Feed> {
     }
     return of([]);
   }
-
-  private calculateStatistics(feeds: Feed[]): FeedStatistics {
-    return {
-      total: feeds.length,
-      active: feeds.filter(feed => feed.active).length,
-      inactive: feeds.filter(feed => !feed.active).length,
-      metered: feeds.filter(feed => feed.metered).length,
-      lastUpdated: feeds.length > 0 ? feeds[0].created.toDate() : null
-    };
-  }
 }

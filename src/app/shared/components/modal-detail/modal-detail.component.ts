@@ -1,8 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { Analytics, logEvent } from '@angular/fire/analytics';
 import { IonButton, IonButtons, IonContent, IonHeader, IonToolbar, ModalController } from '@ionic/angular/standalone';
 
-import { type Feed } from '@core/services';
+import dayjs, { type Dayjs } from 'dayjs';
+
+import { type Feed } from '@core/types/firestore.types';
 import { CardDetailComponent } from './../card-detail/card-detail.component';
 
 @Component({
@@ -13,11 +15,14 @@ import { CardDetailComponent } from './../card-detail/card-detail.component';
   templateUrl: './modal-detail.component.html',
   styleUrls: ['./modal-detail.component.scss']
 })
-export class ModalDetailComponent {
+export class ModalDetailComponent implements OnInit {
   private readonly analytics = inject(Analytics);
   private readonly modal = inject(ModalController);
 
-  readonly item = input<Feed>();
+  readonly item = signal<Feed | Dayjs | undefined>(undefined);
+
+  // Property to receive data from componentProps
+  modalData?: Feed | Dayjs;
 
   constructor() {
     logEvent(this.analytics, 'screen_view', {
@@ -26,11 +31,28 @@ export class ModalDetailComponent {
     });
   }
 
+  ngOnInit(): void {
+    // Set the item from modalData if provided
+    if (this.modalData) {
+      this.item.set(this.modalData);
+    }
+  }
+
+  /**
+   * Sets the item data for the modal
+   */
+  setItem(itemData: Feed | Dayjs): void {
+    this.item.set(itemData);
+  }
+
   async dismiss() {
     await this.modal.dismiss();
+    const currentItem = this.item();
+    const isActive = currentItem && !dayjs.isDayjs(currentItem) ? currentItem.active : true;
+
     logEvent(this.analytics, 'custom_event', {
       modal: 'dismiss',
-      active: this.item()?.active ? 'true' : 'false'
+      active: isActive ? 'true' : 'false'
     });
   }
 }

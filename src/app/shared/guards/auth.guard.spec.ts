@@ -340,12 +340,19 @@ describe('authGuard', () => {
 
     it('should handle service injection correctly', async () => {
       // Verify that the service is properly injected and accessible
-      mockAuthService.isAuthenticated.mockReturnValue(false);
+      mockAuthService.isAuthenticated
+        .mockReturnValueOnce(false) // First check: not authenticated
+        .mockReturnValueOnce(true); // After login: authenticated
+
       mockAuthService.anonymousLogin.mockResolvedValue({
         success: true,
         user: { uid: 'injected-test' } as any
       });
 
+      // Run the guard to trigger service injection
+      const result = await runGuard();
+
+      expect(result).toBe(true);
       // Service methods should be accessible and callable
       expect(mockAuthService.isAuthenticated).toHaveBeenCalled();
       expect(mockAuthService.anonymousLogin).toHaveBeenCalled();

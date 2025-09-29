@@ -71,6 +71,7 @@ const CARD_CONFIG = {
 })
 export class CardDetailComponent {
   readonly item = input<CardDetailInput>();
+  readonly showBorder = input<boolean>(true);
   readonly isLoading = signal<boolean>(false);
 
   constructor() {
@@ -181,5 +182,15 @@ export class CardDetailComponent {
       text: currentDetail.metered ? CARD_CONFIG.METERS_IN_EFFECT : CARD_CONFIG.METERS_NOT_IN_EFFECT,
       class: currentDetail.metered ? 'text-success' : 'text-danger'
     };
+  });
+
+  readonly cardClasses = computed(() => {
+    const currentDetail = this.detail();
+    if (!currentDetail) return '';
+
+    const statusClass = `status-${currentDetail.active ? 'active' : 'inactive'}`;
+    const borderClass = this.showBorder() ? '' : ' no-border';
+
+    return `${statusClass}${borderClass}`;
   });
 }

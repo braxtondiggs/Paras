@@ -9,6 +9,10 @@
   &.status-inactive {
     border-left: 4px solid var(--ion-color-danger);
   }
+
+  &.no-border {
+    border-left: none !important;
+  }
 }
 
 .card-header {

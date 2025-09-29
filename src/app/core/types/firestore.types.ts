@@ -59,7 +59,7 @@ export interface NotificationConfig extends FirestoreDocument {
 
 export type NotificationTime = 'none' | 'custom' | '7:00' | '8:00' | '9:00' | '10:00';
 
-export type FirestoreCollection = 'feed' | 'users' | 'notifications' | 'settings';
+export type FirestoreCollection = 'feed' | 'users' | 'notifications';
 
 export interface QueryResult<T> {
   data: T[];

@@ -14,7 +14,7 @@
       </ion-card-content>
     </ion-card>
   } @else if (detail()) {
-    <ion-card class="parking-card" [class]="'status-' + (detail()?.active ? 'active' : 'inactive')">
+    <ion-card class="parking-card" [class]="cardClasses()">
       <ion-card-header [color]="statusColor()" class="card-header">
         <div class="header-content">
           <div class="date-section">

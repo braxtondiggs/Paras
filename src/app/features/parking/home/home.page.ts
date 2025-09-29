@@ -150,7 +150,9 @@ export class HomePage implements AfterViewInit {
       const modal = await this.modalController.create({
         component: ModalDetailComponent,
         cssClass: 'fullscreen',
-        componentProps: { item: modalData }
+        componentProps: {
+          modalData
+        }
       });
 
       await modal.present();

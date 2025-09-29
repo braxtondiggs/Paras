@@ -1,6 +1,55 @@
-ion-list-header ion-label {
-  font-weight: 600;
-  color: var(--ion-color-medium);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+:host {
+  --loading-skeleton-height: 48px;
+}
+
+// List header styling
+ion-list-header {
+  ion-label {
+    font-weight: 600;
+    color: var(--ion-color-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.875rem;
+  }
+}
+
+// Loading state
+.loading-container {
+  ion-skeleton-text {
+    height: var(--loading-skeleton-height);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Improved list item styling
+ion-list {
+  &[inset="true"] {
+    margin-top: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+ion-item {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --inner-padding-end: 8px;
+
+  ion-icon {
+    margin-inline-end: 16px;
+  }
+}
+
+// Select helper text styling
+ion-select {
+  --placeholder-opacity: 0.7;
+
+  &::part(helper-text) {
+    font-size: 0.75rem;
+    padding-top: 4px;
+  }
 }

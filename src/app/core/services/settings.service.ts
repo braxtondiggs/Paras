@@ -37,7 +37,7 @@ export interface SettingsUpdate {
   providedIn: 'root'
 })
 export class SettingsService extends BaseFirestoreService<Setting> {
-  protected readonly collectionName = 'settings' as const;
+  protected readonly collectionName = 'users' as const;
 
   // Dependencies
   private readonly authService = inject(AuthService);

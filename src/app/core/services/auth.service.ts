@@ -249,14 +249,4 @@ export class AuthService extends BaseFirestoreService<UserDocument> {
       await setDoc(doc(this.firestore, `users/${uid}`), updateData, { merge: true });
     });
   }
-
-  private logAuthEvent(event: string, additionalParams: Record<string, unknown> = {}): void {
-    runInInjectionContext(this.environmentInjector, () => {
-      setUserProperties(this.analytics, {
-        last_auth_event: event,
-        auth_timestamp: new Date().toISOString(),
-        ...additionalParams
-      });
-    });
-  }
 }

@@ -95,23 +95,29 @@ export class AppComponent implements OnInit {
   }
 
   private async setTheme() {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
     const { value } = await Preferences.get({ key: 'darkMode' });
-    const darkMode = value === 'true';
 
-    this.isDarkMode.set(darkMode);
+    // If user hasn't set a preference, use system preference as default
+    if (value === null || value === undefined) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+      const systemDarkMode = prefersDark.matches;
+      await Preferences.set({ key: 'darkMode', value: systemDarkMode.toString() });
+      this.isDarkMode.set(systemDarkMode);
+      this.toggleDarkTheme(systemDarkMode);
 
-    if (darkMode) await Preferences.set({ key: 'darkMode', value: prefersDark.matches.toString() });
-    this.toggleDarkTheme(darkMode);
+      runInInjectionContext(this.environmentInjector, () => {
+        setUserProperties(this.analytics, { darkMode: systemDarkMode.toString() });
+      });
+    } else {
+      // User has set a preference - respect it and don't listen to system changes
+      const darkMode = value === 'true';
+      this.isDarkMode.set(darkMode);
+      this.toggleDarkTheme(darkMode);
 
-    runInInjectionContext(this.environmentInjector, () => {
-      setUserProperties(this.analytics, { darkMode: darkMode.toString() });
-    });
-
-    prefersDark.addEventListener('change', mediaQuery => {
-      this.isDarkMode.set(mediaQuery.matches);
-      this.toggleDarkTheme(mediaQuery.matches);
-    });
+      runInInjectionContext(this.environmentInjector, () => {
+        setUserProperties(this.analytics, { darkMode: darkMode.toString() });
+      });
+    }
   }
 
   private async toggleDarkTheme(shouldAdd: boolean) {
