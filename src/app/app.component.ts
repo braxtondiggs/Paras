@@ -8,13 +8,10 @@ import {
   signal
 } from '@angular/core';
 import { Analytics, setUserProperties } from '@angular/fire/analytics';
-import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { Network } from '@capacitor/network';
 import { Preferences } from '@capacitor/preferences';
 import { PushNotifications, Token } from '@capacitor/push-notifications';
 import { AlertController, IonApp, IonRouterOutlet, Platform } from '@ionic/angular/standalone';
-import { filter, map } from 'rxjs/operators';
 import { register } from 'swiper/element/bundle';
 
 register();
@@ -31,8 +28,6 @@ export class AppComponent implements OnInit {
   private readonly analytics = inject(Analytics);
   private readonly alert = inject(AlertController);
   private readonly platform = inject(Platform);
-  private readonly router = inject(Router);
-  private readonly title = inject(Title);
   public readonly environmentInjector = inject(EnvironmentInjector);
 
   // Signals for reactive state
@@ -41,10 +36,8 @@ export class AppComponent implements OnInit {
   readonly isAppReady = signal(false);
 
   ngOnInit() {
-    this.migrateData();
     this.initializeApp();
     this.setTheme();
-    this.watchTitle();
   }
 
   private async initializeApp() {
@@ -134,38 +127,5 @@ export class AppComponent implements OnInit {
       keyboardClose: false
     });
     await alert.present();
-  }
-
-  private async migrateData() {
-    const darkMode = localStorage.getItem('darkMode');
-    if (localStorage.getItem('intro')) {
-      await Preferences.set({ key: 'intro', value: 'true' });
-      localStorage.removeItem('intro');
-    }
-    if (darkMode) {
-      await Preferences.set({ key: 'darkMode', value: darkMode });
-      localStorage.removeItem('darkMode');
-    }
-  }
-
-  private watchTitle() {
-    this.router.events
-      .pipe(
-        filter(event => event instanceof NavigationEnd),
-        map(() => {
-          let route: ActivatedRoute = this.router.routerState.root;
-          let routeTitle = '';
-          while (route?.firstChild) {
-            route = route.firstChild;
-          }
-          if (route?.snapshot.data?.['title']) {
-            routeTitle = route.snapshot.data['title'];
-          }
-          return routeTitle;
-        })
-      )
-      .subscribe((title: string) => {
-        if (title) this.title.setTitle(title);
-      });
   }
 }

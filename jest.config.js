@@ -71,7 +71,8 @@ export default {
     '!src/app/**/*.type.ts',
     '!src/app/**/*.d.ts',
     '!src/main.ts',
-    '!src/polyfills.ts'
+    '!src/polyfills.ts',
+    '!src/app/**/*.routes.ts'
   ],
   coverageDirectory: '<rootDir>/coverage',
   coverageReporters: [

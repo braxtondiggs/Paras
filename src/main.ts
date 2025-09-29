@@ -1,6 +1,6 @@
 import { enableProdMode } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { PreloadAllModules, provideRouter, RouteReuseStrategy, withPreloading } from '@angular/router';
+import { PreloadAllModules, provideRouter, RouteReuseStrategy, TitleStrategy, withPreloading } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone';
 
@@ -21,6 +21,7 @@ import { getPerformance, providePerformance } from '@angular/fire/performance';
 
 import { AppComponent } from '@app/app.component';
 import { routes } from '@app/app.routes';
+import { PageTitleStrategy } from '@app/core/strategies/page-title.strategy';
 import { environment } from '@environments/environment';
 
 // Initialize production mode
@@ -35,6 +36,7 @@ const emulatorHost = platform === 'android' ? '10.0.2.2' : 'localhost';
 const providers = [
   provideRouter(routes, withPreloading(PreloadAllModules)),
   { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+  { provide: TitleStrategy, useClass: PageTitleStrategy },
   provideIonicAngular({ mode: 'md', innerHTMLTemplatesEnabled: true }),
 
   // Firebase App - Initialize first
