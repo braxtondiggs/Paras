@@ -114,7 +114,7 @@ export class HomePage implements AfterViewInit {
 
   readonly highlightedDates = computed((): HighlightedDate[] =>
     this.items().map(item => ({
-      date: dayjs(item.date.toDate()).format(HOME_CONFIG.DATE_FORMAT),
+      date: item.date.toDate().toISOString().slice(0, 10),
       backgroundColor: HOME_CONFIG.HIGHLIGHTED_DATE_STYLES.backgroundColor,
       textColor: HOME_CONFIG.HIGHLIGHTED_DATE_STYLES.textColor
     }))
@@ -138,12 +138,13 @@ export class HomePage implements AfterViewInit {
     try {
       const { value } = detail;
       const selectedDate = dayjs(value);
+      const selectedDay = selectedDate.toDate().toISOString().slice(0, 10);
 
       // Update selected date
       this.selectedDate.set(selectedDate.toISOString());
 
       // Find matching feed item or use selected date
-      const feedItem = this.items().find(item => dayjs(item.date.toDate()).isSame(selectedDate, 'day'));
+      const feedItem = this.items().find(item => item.date.toDate().toISOString().slice(0, 10) === selectedDay);
 
       const modalData = feedItem || selectedDate;
 
@@ -226,7 +227,6 @@ export class HomePage implements AfterViewInit {
       )
       .subscribe({
         next: (items: Feed[]) => {
-          console.warn('🔥 Fetched feed items:', items.length);
           this.items.set(items);
           this.isLoading.set(false);
         },

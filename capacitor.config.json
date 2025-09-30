@@ -41,7 +41,6 @@
       "androidScaleType": "CENTER_CROP",
       "showSpinner": false,
       "androidSpinnerStyle": "large",
-      "iosSpinnerStyle": "small",
       "spinnerColor": "#999999",
       "splashFullScreen": true,
       "splashImmersive": true,
@@ -63,21 +62,9 @@
     "captureInput": true,
     "webContentsDebuggingEnabled": true,
     "appendUserAgent": "ASP-NYC-App",
-    "overrideUserAgent": null,
     "backgroundColor": "#ffffff",
     "loggingBehavior": "debug",
     "useLegacyBridge": false,
     "minWebViewVersion": 60
-  },
-  "ios": {
-    "scheme": "ASP NYC",
-    "contentInset": "automatic",
-    "scrollEnabled": true,
-    "backgroundColor": "#ffffff",
-    "allowsLinkPreview": false,
-    "handleApplicationNotifications": false,
-    "preferredContentMode": "mobile",
-    "limitsNavigationsToAppBoundDomains": false,
-    "webContentsDebuggingEnabled": true
   }
 }

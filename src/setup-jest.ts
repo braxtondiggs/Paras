@@ -21,23 +21,29 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock IntersectionObserver
+class MockIntersectionObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+
 Object.defineProperty(window, 'IntersectionObserver', {
   writable: true,
-  value: jest.fn().mockImplementation(() => ({
-    disconnect: jest.fn(),
-    observe: jest.fn(),
-    unobserve: jest.fn()
-  }))
+  configurable: true,
+  value: MockIntersectionObserver
 });
 
 // Mock ResizeObserver
+class MockResizeObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+
 Object.defineProperty(window, 'ResizeObserver', {
   writable: true,
-  value: jest.fn().mockImplementation(() => ({
-    disconnect: jest.fn(),
-    observe: jest.fn(),
-    unobserve: jest.fn()
-  }))
+  configurable: true,
+  value: MockResizeObserver
 });
 
 // Mock Ionic/Capacitor globals
@@ -67,13 +73,35 @@ Object.defineProperty(globalThis, 'CSS', {
 // Configure console to show warnings in tests
 const originalWarn = console.warn;
 console.warn = (...args: any[]) => {
-  // Suppress specific warnings that are expected in test environment
-  if (
-    typeof args[0] === 'string' &&
-    (args[0].includes('Angular is running in development mode') ||
-      args[0].includes('Multiple tabs open, persistence can only be enabled in one tab'))
-  ) {
+  const [message] = args;
+  if (typeof message === 'string') {
+    const shouldSuppress =
+      message.includes('Angular is running in development mode') ||
+      message.includes('Multiple tabs open, persistence can only be enabled in one tab') ||
+      message.includes('[Ionicons Warning]');
+
+    if (shouldSuppress) {
+      return;
+    }
+  }
+
+  originalWarn.apply(console, args);
+};
+
+// Suppress Ionic asset path errors that spam console.log during tests
+const originalLog = console.log;
+console.log = (...args: any[]) => {
+  const shouldSuppress = args.some(arg => {
+    try {
+      return typeof arg !== 'undefined' && String(arg).includes('TypeError: Invalid base URL');
+    } catch {
+      return false;
+    }
+  });
+
+  if (shouldSuppress) {
     return;
   }
-  originalWarn.apply(console, args);
+
+  originalLog.apply(console, args);
 };

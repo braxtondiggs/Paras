@@ -1,14 +1,14 @@
 import type { ComponentFixture } from '@angular/core/testing';
-import { LoadingController } from '@ionic/angular/standalone';
+import { Timestamp } from '@angular/fire/firestore';
 import { FeedService, type Feed } from '@core/services';
+import { LoadingController } from '@ionic/angular/standalone';
 import { createComponentFactory, type Spectator } from '@ngneat/spectator/jest';
+import type { Calendar } from '@shared/interfaces';
 import dayjs from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { of, throwError } from 'rxjs';
 import { HorizontalCalendarComponent } from './horizontal-calendar.component';
-import type { Calendar } from '@shared/interfaces';
-import { Timestamp } from '@angular/fire/firestore';
 
 // Extend dayjs plugins
 dayjs.extend(isSameOrBefore);
@@ -465,6 +465,221 @@ describe('HorizontalCalendarComponent', () => {
       component.isLoading.set(true);
 
       expect(() => spectator.fixture.destroy()).not.toThrow();
+    });
+  });
+  const buildCalendarRange = (before = 2, after = 2) =>
+    (component as any).getDatesBetween(dayjs().subtract(before, 'day'), dayjs().add(after, 'day')) as Calendar[];
+
+  describe('Swiper Interactions', () => {
+    const createSwiper = () => ({
+      activeIndex: 0,
+      slideTo: jest.fn(),
+      slideNext: jest.fn(),
+      slidePrev: jest.fn(),
+      update: jest.fn()
+    });
+
+    it('slideTo updates active calendar when index is valid', () => {
+      const loadDataSpy = jest.spyOn(component as any, 'loadData').mockResolvedValue(undefined);
+      try {
+        const items = buildCalendarRange();
+        component.items.set(items);
+        component.isLoading.set(false);
+        component.isSliding.set(false);
+
+        const swiperInstance = createSwiper();
+        (component as any).swiper = { nativeElement: { swiper: swiperInstance } };
+
+        component.slideTo(1);
+
+        expect(swiperInstance.slideTo).toHaveBeenCalledWith(1, 250);
+        expect(component.active()).toBe(items[1]);
+      } finally {
+        delete (component as any).swiper;
+        loadDataSpy.mockRestore();
+      }
+    });
+
+    it('slideTo ignores out-of-range indices', () => {
+      const loadDataSpy = jest.spyOn(component as any, 'loadData').mockResolvedValue(undefined);
+      try {
+        const items = buildCalendarRange();
+        component.items.set(items);
+        component.isLoading.set(false);
+        component.isSliding.set(false);
+
+        const swiperInstance = createSwiper();
+        (component as any).swiper = { nativeElement: { swiper: swiperInstance } };
+
+        component.slideTo(-1);
+        component.slideTo(items.length + 5);
+
+        expect(swiperInstance.slideTo).not.toHaveBeenCalled();
+      } finally {
+        delete (component as any).swiper;
+        loadDataSpy.mockRestore();
+      }
+    });
+
+    it('slideNext and slidePrev delegate to swiper when navigation allowed', () => {
+      const loadDataSpy = jest.spyOn(component as any, 'loadData').mockResolvedValue(undefined);
+      try {
+        component.isLoading.set(false);
+        component.isSliding.set(false);
+
+        const swiperInstance = createSwiper();
+        (component as any).swiper = { nativeElement: { swiper: swiperInstance } };
+
+        component.slideNext();
+        component.slidePrev();
+
+        expect(swiperInstance.slideNext).toHaveBeenCalled();
+        expect(swiperInstance.slidePrev).toHaveBeenCalled();
+      } finally {
+        delete (component as any).swiper;
+        loadDataSpy.mockRestore();
+      }
+    });
+
+    it('onSlideChange loads additional dates when reaching the end', async () => {
+      jest.useFakeTimers();
+      const loadDataSpy = jest.spyOn(component as any, 'loadData').mockResolvedValue(undefined);
+      try {
+        const items = buildCalendarRange();
+        component.items.set(items);
+        component.isLoading.set(false);
+        component.isSliding.set(false);
+
+        const swiperInstance = createSwiper();
+        swiperInstance.activeIndex = items.length - 1;
+        (component as any).swiper = { nativeElement: { swiper: swiperInstance } };
+
+        const initialLength = component.items().length;
+        const promise = component.onSlideChange();
+
+        jest.runAllTimers();
+        await promise;
+
+        expect(component.items().length).toBeGreaterThan(initialLength);
+        expect(swiperInstance.update).toHaveBeenCalled();
+        expect(component.isSliding()).toBe(false);
+      } finally {
+        delete (component as any).swiper;
+        loadDataSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+
+    it('onSlideChange loads previous dates when reaching the start', async () => {
+      jest.useFakeTimers();
+      const loadDataSpy = jest.spyOn(component as any, 'loadData').mockResolvedValue(undefined);
+      try {
+        const items = buildCalendarRange();
+        component.items.set(items);
+        component.isLoading.set(false);
+        component.isSliding.set(false);
+
+        const swiperInstance = createSwiper();
+        swiperInstance.activeIndex = 0;
+        (component as any).swiper = { nativeElement: { swiper: swiperInstance } };
+
+        const initialLength = component.items().length;
+        const promise = component.onSlideChange();
+
+        jest.runAllTimers();
+        await promise;
+
+        expect(component.items().length).toBeGreaterThan(initialLength);
+        const addedCount = component.items().length - initialLength;
+        expect(swiperInstance.slideTo).toHaveBeenCalledWith(addedCount, 0);
+        expect(swiperInstance.update).toHaveBeenCalled();
+      } finally {
+        delete (component as any).swiper;
+        loadDataSpy.mockRestore();
+        jest.useRealTimers();
+      }
+    });
+  });
+
+  describe('Data Loading', () => {
+    it('loadData fetches feeds and centers active date', async () => {
+      jest.useFakeTimers();
+      try {
+        const items = buildCalendarRange();
+        component.items.set(items);
+        component.active.set(items[0]);
+
+        const swiperInstance = {
+          activeIndex: 0,
+          slideTo: jest.fn(),
+          slideNext: jest.fn(),
+          slidePrev: jest.fn(),
+          update: jest.fn()
+        };
+        (component as any).swiper = { nativeElement: { swiper: swiperInstance } };
+
+        mockFeedService.getFeeds.mockReturnValue(of([mockFeed]));
+
+        const promise = (component as any).loadData();
+
+        jest.runAllTimers();
+        await promise;
+
+        expect(mockFeedService.getFeeds).toHaveBeenCalledWith(expect.objectContaining({ type: 'NYC' }));
+        expect(component.selected()).toBeTruthy();
+        expect(component.feeds()).toHaveLength(1);
+        expect(component.isLoading()).toBe(false);
+        expect(swiperInstance.slideTo).toHaveBeenCalled();
+      } finally {
+        delete (component as any).swiper;
+        jest.useRealTimers();
+      }
+    });
+  });
+
+  describe('Robustness', () => {
+    it('hasNotice returns false when feed evaluation throws', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const problematicFeed = {
+        ...mockFeed,
+        active: false,
+        date: {
+          toDate: () => {
+            throw new Error('bad date');
+          }
+        }
+      } as unknown as Feed;
+
+      const calendar = {
+        date: dayjs().toDate(),
+        text: dayjs().format(),
+        month: { short: 'Jan', long: 'January' },
+        day: { short: 'Mon', long: 'Monday', num: '01' }
+      } as Calendar;
+
+      expect(component.hasNotice(calendar, [problematicFeed])).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to get selected item:', expect.any(Error));
+
+      consoleSpy.mockRestore();
+    });
+
+    it('createCalendarItem throws on invalid dates', () => {
+      expect(() => (component as any).createCalendarItem(dayjs('invalid date'))).toThrow('Invalid date');
+    });
+
+    it('getDatesBetween returns empty array when calendar creation fails', () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const spy = jest.spyOn(component as any, 'createCalendarItem').mockImplementation(() => {
+        throw new Error('creation failed');
+      });
+
+      const results = (component as any).getDatesBetween(dayjs(), dayjs().add(1, 'day'));
+
+      expect(results).toEqual([]);
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to generate date range:', expect.any(Error));
+
+      consoleSpy.mockRestore();
+      spy.mockRestore();
     });
   });
 });

@@ -9,10 +9,10 @@ import {
   where
 } from '@angular/fire/firestore';
 import { traceUntilFirst } from '@angular/fire/performance';
-import dayjs, { Dayjs } from 'dayjs';
+import { Dayjs } from 'dayjs';
 import { Observable, of } from 'rxjs';
 import { catchError, map, retry, shareReplay, startWith, tap } from 'rxjs/operators';
-import type { Feed, OperationResult } from '../types/firestore.types';
+import type { Feed } from '../types/firestore.types';
 import { BaseFirestoreService } from './base-firestore.service';
 
 // Feed query parameters interface
@@ -82,15 +82,6 @@ export class FeedService extends BaseFirestoreService<Feed> {
     });
   }
 
-  async bulkCreateFeeds(feeds: Omit<Feed, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<OperationResult> {
-    const operations = feeds.map(feed => ({
-      type: 'create' as const,
-      data: feed
-    }));
-
-    return this.batchWrite(operations);
-  }
-
   async setOfflineMode(offline: boolean): Promise<void> {
     this._offlineMode.set(offline);
 
@@ -115,35 +106,6 @@ export class FeedService extends BaseFirestoreService<Feed> {
   clearCache(): void {
     this._cache.clear();
     console.warn('🔥 Feed cache cleared');
-  }
-
-  getTodayFeeds(): Observable<Feed[]> {
-    const today = dayjs().startOf('day');
-    const tomorrow = today.add(1, 'day');
-
-    return this.getFeeds({
-      startDate: today,
-      endDate: tomorrow,
-      type: 'NYC'
-    });
-  }
-
-  getWeekFeeds(): Observable<Feed[]> {
-    const startOfWeek = dayjs().startOf('week');
-    const endOfWeek = dayjs().endOf('week');
-
-    return this.getFeeds({
-      startDate: startOfWeek,
-      endDate: endOfWeek,
-      type: 'NYC'
-    });
-  }
-
-  isParkingSuspended(): Observable<boolean> {
-    return this.getTodayFeeds().pipe(
-      map(feeds => feeds.some(feed => feed.active)),
-      traceUntilFirst('is_parking_suspended')
-    );
   }
 
   // Private helper methods

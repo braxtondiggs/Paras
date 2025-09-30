@@ -15,8 +15,7 @@ dependencies {
     implementation project(':capacitor-preferences')
     implementation project(':capacitor-push-notifications')
     implementation project(':capacitor-email-composer')
-    implementation "com.google.android.play:review:2.0.1"
-    implementation "com.android.billingclient:billing:7.1.1"
+
 }
 
 
