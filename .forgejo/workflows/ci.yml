@@ -1,0 +1,224 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "20"
+  FUNCTIONS_NODE_VERSION: "18"
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        id: cache-nm
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-nm-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-nm.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        id: cache-nm
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-nm-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-nm.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Cache Nx
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/nx
+          key: nx-${{ runner.os }}-${{ github.sha }}
+          restore-keys: nx-${{ runner.os }}-
+
+      - name: Run tests
+        run: npm test -- --ci --forceExit --coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false || github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache node_modules
+        id: cache-nm
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-nm-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-nm.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Cache Nx
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/nx
+          key: nx-${{ runner.os }}-${{ github.sha }}
+          restore-keys: nx-${{ runner.os }}-
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+
+      - name: Check bundle budget
+        run: |
+          BUNDLE_SIZE=$(du -sk www/main*.js 2>/dev/null | awk '{print $1}' || echo "0")
+          echo "Bundle size: ${BUNDLE_SIZE}KB"
+          if [ "$BUNDLE_SIZE" -gt 2048 ]; then
+            echo "ERROR: Bundle exceeds 2 MB hard limit (${BUNDLE_SIZE}KB)" && exit 1
+          elif [ "$BUNDLE_SIZE" -gt 1843 ]; then
+            echo "WARNING: Bundle is approaching the 1.8 MB warning threshold (${BUNDLE_SIZE}KB)"
+          fi
+
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: www/
+          retention-days: 7
+          if-no-files-found: warn
+
+  functions:
+    name: Functions Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.FUNCTIONS_NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Cache functions node_modules
+        id: cache-fn-nm
+        uses: actions/cache@v4
+        with:
+          path: functions/node_modules
+          key: ${{ runner.os }}-fn-nm-${{ hashFiles('functions/package-lock.json') }}
+
+      - name: Install function dependencies
+        if: steps.cache-fn-nm.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline --no-audit
+        working-directory: functions
+
+      - name: Lint functions
+        run: npm run lint
+        working-directory: functions
+
+      - name: Build functions
+        run: npm run build
+        working-directory: functions
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Audit app dependencies
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Audit function dependencies
+        run: npm audit --audit-level=high
+        continue-on-error: true
+        working-directory: functions
+
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [typecheck, test, build, functions, security]
+    if: always()
+
+    steps:
+      - name: Check all jobs
+        run: |
+          # typecheck and test are skipped on master push (already validated by PR)
+          for job in typecheck test; do
+            result=$(echo '${{ toJSON(needs) }}' | jq -r ".[\"$job\"].result")
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "❌ $job failed (result: $result)"
+              exit 1
+            fi
+          done
+          for job in build functions; do
+            result=$(echo '${{ toJSON(needs) }}' | jq -r ".[\"$job\"].result")
+            if [ "$result" != "success" ]; then
+              echo "❌ $job failed (result: $result)"
+              exit 1
+            fi
+          done
+          echo "✅ All CI checks passed"
