@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "firebase": {
+      "command": "npx",
+      "args": ["-y", "firebase-tools@latest", "experimental:mcp"],
+      "env": {
+        "FIREBASE_PROJECT": "paras-293d5"
+      }
+    },
+    "forgejo": {
+      "command": "npx",
+      "args": ["-y", "gitea-mcp@latest"],
+      "env": {
+        "GITEA_URL": "<YOUR_FORGEJO_INSTANCE_URL>",
+        "GITEA_TOKEN": "<YOUR_FORGEJO_ACCESS_TOKEN>"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@executeautomation/playwright-mcp-server"],
+      "env": {}
+    },
+    "nx": {
+      "command": "npx",
+      "args": ["-y", "@nx/mcp"],
+      "env": {}
+    }
+  }
+}
