@@ -18,5 +18,11 @@
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "firebase",
+    "forgejo",
+    "playwright",
+    "nx"
+  ]
 }

@@ -11,8 +11,8 @@
       "command": "npx",
       "args": ["-y", "gitea-mcp@latest"],
       "env": {
-        "GITEA_URL": "<YOUR_FORGEJO_INSTANCE_URL>",
-        "GITEA_TOKEN": "<YOUR_FORGEJO_ACCESS_TOKEN>"
+        "GITEA_HOST": "https://git.braxt.in",
+        "GITEA_ACCESS_TOKEN": "${FORGEJO_TOKEN_MCP}"
       }
     },
     "playwright": {
