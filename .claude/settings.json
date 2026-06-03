@@ -1,0 +1,66 @@
+{
+  "includeCoAuthoredBy": false,
+  "rules": [
+    "This is a production app used by real NYC drivers. Data correctness and notification reliability are the highest priorities — a wrong schedule or missed notification could cause a user to get a parking ticket.",
+    "Always use standalone Angular components (standalone: true). Never suggest or create NgModule-based patterns.",
+    "Use dayjs for all date manipulation. Never use native Date, moment, or date-fns.",
+    "Firestore queries belong in FeedService. Do not add Firestore calls directly to components.",
+    "Guard all Capacitor plugin calls with Capacitor.isNativePlatform() where the API does not exist in a browser.",
+    "Never change the Firebase App ID (com.cymbit.paras) — it is tied to App Store and Play Store listings.",
+    "Never run `firebase deploy` without explicit user confirmation.",
+    "Cloud Functions run on Node.js 18. Do not use Node 20+ APIs.",
+    "After any change to src/, remind the user to run `npx cap sync` to update native iOS and Android projects.",
+    "Bundle budget: 1.8 MB warning, 2 MB error. Flag new dependencies that could push the bundle over these limits.",
+    "Use inject() for dependency injection in Angular components and services, not constructor injection.",
+    "Prefer RxJS observables and AsyncPipe over async/await and stored properties in Angular components.",
+    "Use Spectator for all Angular tests. Never use TestBed.configureTestingModule directly.",
+    "Notification trigger times (7:30 AM today, 4 PM tomorrow) are user-configurable — never hardcode time logic without checking the notifications Firestore collection schema.",
+    "When suggesting a fix that affects Firestore collection/document structure, flag it explicitly — schema changes affect production data for all users.",
+    "Prevent god files: no single file should handle more than one clear responsibility. If a component, service, or function file exceeds ~200 lines or mixes concerns (e.g. UI logic + data fetching + auth + notifications in one class), split it. Services must be single-purpose — FeedService fetches feed data, AuthService handles auth, never combined. Flag any existing god file before adding more code to it and suggest how to split it instead."
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(npm run test*)",
+      "Bash(npm run build*)",
+      "Bash(npm start)",
+      "Bash(npm run copy)",
+      "Bash(npm run stats)",
+      "Bash(npm run lint*)",
+      "Bash(npx cap sync)",
+      "Bash(npx cap copy)",
+      "Bash(npx cap open*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(git stash*)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)",
+      "Bash(find . -name *.ts*)",
+      "Bash(find . -name *.html*)",
+      "Bash(find . -name *.scss*)",
+      "Bash(grep -r*)",
+      "Bash(cat*)",
+      "Bash(firebase emulators:start*)",
+      "Bash(firebase functions:log*)",
+      "mcp__firebase__*",
+      "mcp__forgejo__*",
+      "mcp__context7__*",
+      "mcp__nx__*",
+      "mcp__playwright__*",
+      "mcp__claude-in-chrome__*"
+    ],
+    "deny": [
+      "Bash(firebase deploy*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf*)"
+    ]
+  },
+  "env": {
+    "FIREBASE_PROJECT": "paras-293d5"
+  }
+}
