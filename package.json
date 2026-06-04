@@ -5,7 +5,7 @@
   "homepage": "https://braxtondiggs.com/",
   "scripts": {
     "start": "ng serve",
-    "start:android": "ionic capacitor run android --livereload --external --host=0.0.0.0",
+    "start:android": "NODE_ENV=development ionic capacitor run android --livereload --external --host=0.0.0.0",
     "build": "rm -rf ./www && ng build && npx cap sync",
     "stats": "ng build --stats-json && webpack-bundle-analyzer ./www/stats.json",
     "test": "jest --runInBand",

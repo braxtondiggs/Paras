@@ -48,22 +48,10 @@
 			"useDialog": true
 		}
 	},
-	"server": {
-		"url": "http://localhost:8100",
-		"cleartext": true,
-		"allowNavigation": [
-			"http://localhost:*",
-			"https://localhost:*",
-			"ionic://localhost/*"
-		]
-	},
 	"android": {
-		"allowMixedContent": true,
 		"captureInput": true,
-		"webContentsDebuggingEnabled": true,
 		"appendUserAgent": "ASP-NYC-App",
 		"backgroundColor": "#ffffff",
-		"loggingBehavior": "debug",
 		"useLegacyBridge": false,
 		"minWebViewVersion": 60
 	}
