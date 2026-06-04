@@ -6,7 +6,7 @@
   "scripts": {
     "start": "ng serve",
     "start:android": "ionic capacitor run android --livereload --external --host=0.0.0.0",
-    "build": "rm -rf ./www && ionic capacitor sync",
+    "build": "rm -rf ./www && ng build && npx cap sync",
     "stats": "ng build --stats-json && webpack-bundle-analyzer ./www/stats.json",
     "test": "jest --runInBand",
     "test:coverage": "jest --coverage",

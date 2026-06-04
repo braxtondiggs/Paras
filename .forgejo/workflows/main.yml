@@ -1,15 +1,9 @@
 name: 🚀 Deployment Pipeline
 
+# Manual-dispatch only. Lint/test/build on push are owned by ci.yml; this
+# pipeline handles deploys and is triggered intentionally to avoid duplicate
+# runs (and duplicate failures) on every push.
 on:
-  push:
-    branches: [master, dev]
-    paths:
-      - 'functions/**'
-      - 'src/**'
-      - 'package.json'
-      - '.forgejo/workflows/**'
-  pull_request:
-    branches: [master]
   workflow_dispatch:
     inputs:
       deploy_target:
@@ -39,7 +33,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: npm
 
       - name: 📂 Install dependencies
         run: npm ci
@@ -51,13 +45,16 @@ jobs:
         run: npm run test:coverage
 
   # Firebase Functions Deploy
+  # TEMPORARILY DISABLED: set `if: false` to skip deploys for now.
+  # To re-enable, restore the trigger condition below.
   functions-deploy:
     name: ⚡ Functions Deployment
     runs-on: ubuntu-latest
     needs: quality-checks
-    if: |
-      (github.ref == 'refs/heads/master') ||
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'functions' || github.event.inputs.deploy_target == 'all'))
+    if: false
+    # if: |
+    #   (github.ref == 'refs/heads/master') ||
+    #   (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'functions' || github.event.inputs.deploy_target == 'all'))
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -66,25 +63,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18' # Functions require Node 18
-          cache: 'npm'
+          cache: npm
 
       - name: 📂 Install main dependencies
         run: npm ci
 
       - name: 📂 Install functions dependencies
-        run: |
-          cd functions
-          npm ci
+        run: npm ci
+        working-directory: functions
 
       - name: 🏗️ Build functions
-        run: |
-          cd functions
-          npm run build
+        run: npm run build
+        working-directory: functions
+
+      - name: 🛠️ Install Firebase CLI
+        run: npm install -g firebase-tools
 
       - name: 🔥 Deploy Firebase Functions
-        run: |
-          cd functions
-          npm run deploy
+        run: firebase deploy --only functions --non-interactive
+        working-directory: functions
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
@@ -93,9 +90,8 @@ jobs:
     name: 🤖 Android Build
     runs-on: ubuntu-latest
     needs: quality-checks
-    if: |
-      (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'android' || github.event.inputs.deploy_target == 'all')) ||
-      (github.ref == 'refs/heads/master' && contains(github.event.head_commit.message, '[android]'))
+    # Dispatch-only workflow: run when android (or all) is selected.
+    if: github.event.inputs.deploy_target == 'android' || github.event.inputs.deploy_target == 'all'
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -104,7 +100,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: npm
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -118,22 +114,20 @@ jobs:
       - name: 📂 Install dependencies
         run: npm ci
 
-      - name: 🏗️ Build for Android
-        run: npm run build:android
+      - name: 🏗️ Build web + sync Android
+        run: npm run build
 
       - name: 🔧 Make gradlew executable
         run: chmod +x android/gradlew
 
       - name: 📱 Build debug APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
+        run: ./gradlew assembleDebug
+        working-directory: android
 
       - name: 📱 Build release AAB (if master)
         if: github.ref == 'refs/heads/master'
-        run: |
-          cd android
-          ./gradlew bundleRelease
+        run: ./gradlew bundleRelease
+        working-directory: android
         env:
           ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -152,59 +146,3 @@ jobs:
         with:
           name: android-aab
           path: android/app/build/outputs/bundle/release/*.aab
-
-  # iOS Build (Disabled - uncomment when needed)
-  # ios-build:
-  #   name: 🍎 iOS Build
-  #   runs-on: macos-latest
-  #   needs: quality-checks
-  #   if: |
-  #     (github.event_name == 'workflow_dispatch' && (github.event.inputs.deploy_target == 'ios' || github.event.inputs.deploy_target == 'all')) ||
-  #     (github.ref == 'refs/heads/master' && contains(github.event.head_commit.message, '[ios]'))
-  #   steps:
-  #     - name: 📥 Checkout code
-  #       uses: actions/checkout@v4
-  #
-  #     - name: 📦 Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: ${{ env.NODE_VERSION }}
-  #         cache: 'npm'
-  #
-  #     - name: 🍎 Setup Xcode
-  #       uses: maxim-lobanov/setup-xcode@v1
-  #       with:
-  #         xcode-version: 'latest-stable'
-  #
-  #     - name: 💎 Setup Ruby for Fastlane
-  #       uses: ruby/setup-ruby@v1
-  #       with:
-  #         ruby-version: '3.1'
-  #         bundler-cache: true
-  #
-  #     - name: 📂 Install dependencies
-  #       run: npm ci
-  #
-  #     - name: 🏗️ Build for iOS
-  #       run: npm run build:ios
-  #
-  #     - name: 📦 Install CocoaPods
-  #       run: |
-  #         cd ios/App
-  #         pod install
-  #
-  #     - name: 🔧 Build iOS app
-  #       run: |
-  #         cd ios/App
-  #         xcodebuild -workspace App.xcworkspace \
-  #                    -scheme App \
-  #                    -configuration Debug \
-  #                    -destination 'generic/platform=iOS Simulator' \
-  #                    -archivePath App.xcarchive \
-  #                    archive
-  #
-  #     - name: 📤 Upload iOS build artifact
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: ios-build
-  #         path: ios/App/App.xcarchive

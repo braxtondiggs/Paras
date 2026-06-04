@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 env:
-  NODE_VERSION: "20"
-  FUNCTIONS_NODE_VERSION: "18"
+  NODE_VERSION: '20'
+  FUNCTIONS_NODE_VERSION: '18'
 
 jobs:
   typecheck:
@@ -31,15 +31,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Cache node_modules
-        id: cache-nm
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-nm-${{ hashFiles('package-lock.json') }}
-
       - name: Install dependencies
-        if: steps.cache-nm.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline --no-audit
 
       - name: Typecheck
@@ -58,35 +50,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Cache node_modules
-        id: cache-nm
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-nm-${{ hashFiles('package-lock.json') }}
-
       - name: Install dependencies
-        if: steps.cache-nm.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline --no-audit
-
-      - name: Cache Nx
-        uses: actions/cache@v4
-        with:
-          path: node_modules/.cache/nx
-          key: nx-${{ runner.os }}-${{ github.sha }}
-          restore-keys: nx-${{ runner.os }}-
 
       - name: Run tests
         run: npm test -- --ci --forceExit --coverage
-
-      - name: Upload coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
-          path: coverage/
-          retention-days: 7
-          if-no-files-found: ignore
 
   build:
     name: Build
@@ -101,23 +69,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Cache node_modules
-        id: cache-nm
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-nm-${{ hashFiles('package-lock.json') }}
-
       - name: Install dependencies
-        if: steps.cache-nm.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline --no-audit
-
-      - name: Cache Nx
-        uses: actions/cache@v4
-        with:
-          path: node_modules/.cache/nx
-          key: nx-${{ runner.os }}-${{ github.sha }}
-          restore-keys: nx-${{ runner.os }}-
 
       - name: Build
         run: npm run build
@@ -134,15 +87,6 @@ jobs:
             echo "WARNING: Bundle is approaching the 1.8 MB warning threshold (${BUNDLE_SIZE}KB)"
           fi
 
-      - name: Upload build artifacts
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: www/
-          retention-days: 7
-          if-no-files-found: warn
-
   functions:
     name: Functions Lint & Build
     runs-on: ubuntu-latest
@@ -156,15 +100,7 @@ jobs:
           cache: npm
           cache-dependency-path: functions/package-lock.json
 
-      - name: Cache functions node_modules
-        id: cache-fn-nm
-        uses: actions/cache@v4
-        with:
-          path: functions/node_modules
-          key: ${{ runner.os }}-fn-nm-${{ hashFiles('functions/package-lock.json') }}
-
-      - name: Install function dependencies
-        if: steps.cache-fn-nm.outputs.cache-hit != 'true'
+      - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
         working-directory: functions
 
@@ -206,19 +142,21 @@ jobs:
     steps:
       - name: Check all jobs
         run: |
-          # typecheck and test are skipped on master push (already validated by PR)
-          for job in typecheck test; do
-            result=$(echo '${{ toJSON(needs) }}' | jq -r ".[\"$job\"].result")
-            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
-              echo "❌ $job failed (result: $result)"
-              exit 1
-            fi
-          done
-          for job in build functions; do
-            result=$(echo '${{ toJSON(needs) }}' | jq -r ".[\"$job\"].result")
-            if [ "$result" != "success" ]; then
-              echo "❌ $job failed (result: $result)"
-              exit 1
-            fi
-          done
+          # Job results are injected via expressions (no jq: the runner image
+          # has no jq). A skipped job is not a failure: typecheck/test are
+          # skipped on master push (validated by PR) and typecheck/test/build on
+          # draft PRs. security is advisory-only and intentionally not gated.
+          fail=0
+          check() {
+            job=$1; result=$2; allow_skip=$3
+            if [ "$result" = "success" ]; then return; fi
+            if [ "$allow_skip" = "skip-ok" ] && [ "$result" = "skipped" ]; then return; fi
+            echo "❌ $job failed (result: $result)"
+            fail=1
+          }
+          check typecheck "${{ needs.typecheck.result }}" skip-ok
+          check test "${{ needs.test.result }}" skip-ok
+          check build "${{ needs.build.result }}" skip-ok
+          check functions "${{ needs.functions.result }}" required
+          if [ "$fail" -ne 0 ]; then exit 1; fi
           echo "✅ All CI checks passed"

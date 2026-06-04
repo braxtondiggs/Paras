@@ -1,14 +1,17 @@
 name: Claude Code Review
 
+# DISABLED: automated review on pull_request is turned off so it no longer
+# creates a run on every PR push. Manual `workflow_dispatch` is kept as an
+# escape hatch. To re-enable automation, restore the pull_request block below.
 on:
   workflow_dispatch:
-  pull_request:
-    types: [opened, ready_for_review, synchronize]
-    paths:
-      - 'src/**'
-      - 'functions/src/**'
-      - '*.json'
-      - '*.md'
+  # pull_request:
+  #   types: [opened, ready_for_review, synchronize]
+  #   paths:
+  #     - 'src/**'
+  #     - 'functions/src/**'
+  #     - '*.json'
+  #     - '*.md'
 
 jobs:
   claude-review:
