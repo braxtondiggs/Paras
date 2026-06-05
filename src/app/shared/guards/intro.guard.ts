@@ -8,13 +8,13 @@ export const introGuard = async (): Promise<boolean> => {
   try {
     const { value } = await Preferences.get({ key: 'intro' });
     if (value !== 'true') {
-      router.navigate(['intro']);
+      void router.navigate(['intro']);
       return false;
     }
     return true;
   } catch (error) {
     console.warn('Failed to check intro preference:', error);
-    router.navigate(['intro']);
+    void router.navigate(['intro']);
     return false;
   }
 };

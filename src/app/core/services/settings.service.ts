@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Preferences } from '@capacitor/preferences';
-import { of } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
 import type { NotificationTime, OperationResult, Setting } from '../types/firestore.types';
 import { AuthService } from './auth.service';
@@ -106,7 +106,7 @@ export class SettingsService extends BaseFirestoreService<Setting> {
 
     try {
       // Check if settings already exist
-      const existingSettings = await this.getById(user.uid).toPromise();
+      const existingSettings = await firstValueFrom(this.getById(user.uid), { defaultValue: undefined });
 
       if (existingSettings) {
         this._isLoading.set(false);

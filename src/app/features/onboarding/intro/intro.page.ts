@@ -26,7 +26,7 @@ export class IntroPage {
     } catch (error) {
       console.warn('Failed to save intro preference:', error);
     } finally {
-      this.router.navigate(['/']);
+      void this.router.navigate(['/']);
     }
   }
 }

@@ -163,8 +163,12 @@ export class HomePage implements AfterViewInit {
   }
 
   async ngAfterViewInit(): Promise<void> {
-    await this.initializeData();
-    this.initializeComponent();
+    try {
+      await this.initializeData();
+      this.initializeComponent();
+    } catch (error) {
+      console.error('Error during view initialization:', error);
+    }
   }
 
   /**
@@ -243,7 +247,7 @@ export class HomePage implements AfterViewInit {
 
   private navigateToRoute(isCalendarView: boolean): void {
     const route = isCalendarView ? ROUTE_PATHS.HOME_CALENDAR : ROUTE_PATHS.HOME;
-    this.router.navigate([route], { replaceUrl: true });
+    void this.router.navigate([route], { replaceUrl: true });
   }
 
   private async getLastDate(): Promise<void> {
