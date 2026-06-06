@@ -40,8 +40,7 @@ import { heart, informationCircle, moon, thumbsUp } from 'ionicons/icons';
 import { Analytics, logEvent, setUserProperties } from '@angular/fire/analytics';
 
 import { LaunchReview } from '@awesome-cordova-plugins/launch-review/ngx';
-import { Preferences } from '@capacitor/preferences';
-import { SettingsService, type Setting } from '@core/services';
+import { SettingsService, ThemeService, type Setting } from '@core/services';
 
 import { EmailComposer } from 'capacitor-email-composer';
 
@@ -81,6 +80,7 @@ export class SettingsPage implements OnInit {
   // Services injected with modern inject() pattern
   private readonly analytics = inject(Analytics);
   private readonly settingsService = inject(SettingsService);
+  private readonly theme = inject(ThemeService);
   private readonly alert = inject(AlertController);
   private readonly fb = inject(FormBuilder);
   private readonly launchReview = inject(LaunchReview);
@@ -229,8 +229,7 @@ export class SettingsPage implements OnInit {
   }
 
   private async handleDarkModeChange(value: boolean): Promise<void> {
-    await Preferences.set({ key: 'darkMode', value: value.toString() });
-    document.body.classList.toggle('dark', value);
+    await this.theme.setDark(value);
     await this.saveSettings({ darkMode: value });
 
     this.logAnalyticsEvent('dark mode', { active: value.toString() }, { darkMode: value.toString() });
