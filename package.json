@@ -17,7 +17,7 @@
     "format:check": "prettier --check ."
   },
   "engines": {
-    "node": "20"
+    "node": ">=20"
   },
   "private": true,
   "dependencies": {
@@ -36,6 +36,7 @@
     "@capacitor/app": "^7.0.2",
     "@capacitor/core": "^7.4.3",
     "@capacitor/haptics": "^7.0.2",
+    "@capacitor/ios": "^7.4.3",
     "@capacitor/network": "^7.0.2",
     "@capacitor/preferences": "^7.0.2",
     "@capacitor/push-notifications": "^7.0.2",
