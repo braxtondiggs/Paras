@@ -42,7 +42,7 @@
             (click)="slideTo(i)"
             (keydown.enter)="slideTo(i)"
             (keydown.space)="slideTo(i)"
-            [attr.aria-label]="'Select ' + item.day.long + ' ' + item.day.num"
+            [attr.aria-label]="'Select ' + item.day.long + ' ' + item.day.num + (hasNotice(item, feeds()) ? ', parking suspended' : '')"
             [attr.role]="'button'"
             [attr.tabindex]="0"
             class="ion-activatable ripple-parent calendar-day"

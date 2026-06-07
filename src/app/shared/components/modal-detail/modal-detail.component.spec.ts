@@ -403,4 +403,21 @@ describe('ModalDetailComponent', () => {
       }
     });
   });
+
+  describe('Accessibility', () => {
+    it('should render a toolbar title for the modal', () => {
+      fixture.detectChanges();
+      expect(spectator.query('ion-title')).toBeTruthy();
+    });
+
+    it('should expose an aria-label on the close button', () => {
+      fixture.detectChanges();
+      expect(spectator.query('ion-button[aria-label="Close parking details"]')).toBeTruthy();
+    });
+
+    it('should label the content region for assistive technology', () => {
+      fixture.detectChanges();
+      expect(spectator.query('ion-content[aria-label="Parking details"]')).toBeTruthy();
+    });
+  });
 });

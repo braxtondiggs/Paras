@@ -1,10 +1,11 @@
 <ion-header translucent>
   <ion-toolbar>
+    <ion-title>Parking Details</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="dismiss()">Close</ion-button>
+      <ion-button (click)="dismiss()" aria-label="Close parking details">Close</ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content fullscreen>
+<ion-content fullscreen role="region" aria-label="Parking details">
   <app-card-detail [item]="item()" [showBorder]="false" />
 </ion-content>

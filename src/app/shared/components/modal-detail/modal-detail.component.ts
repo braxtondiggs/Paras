@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { Analytics, logEvent } from '@angular/fire/analytics';
-import { IonButton, IonButtons, IonContent, IonHeader, IonToolbar, ModalController } from '@ionic/angular/standalone';
+import { IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar, ModalController } from '@ionic/angular/standalone';
 
 import dayjs, { type Dayjs } from 'dayjs';
 
@@ -9,7 +9,7 @@ import { CardDetailComponent } from './../card-detail/card-detail.component';
 
 @Component({
   standalone: true,
-  imports: [CardDetailComponent, IonButton, IonButtons, IonContent, IonHeader, IonToolbar],
+  imports: [CardDetailComponent, IonButton, IonButtons, IonContent, IonHeader, IonTitle, IonToolbar],
   selector: 'app-modal-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './modal-detail.component.html',
