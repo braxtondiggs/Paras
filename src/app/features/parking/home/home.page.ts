@@ -51,7 +51,6 @@ interface HighlightedDate {
 // Constants
 const HOME_CONFIG = {
   SLIDE_TRANSITION_DURATION: 300,
-  DATE_FORMAT: 'YYYY-MM-DD',
   HIGHLIGHTED_DATE_STYLES: {
     backgroundColor: '#f38181',
     textColor: '#fff'
@@ -64,8 +63,7 @@ const HOME_CONFIG = {
 
 const ROUTE_PATHS = {
   HOME: '/home',
-  HOME_CALENDAR: '/home/calendar',
-  SETTINGS: '/settings'
+  HOME_CALENDAR: '/home/calendar'
 } as const;
 
 /**
@@ -123,7 +121,7 @@ export class HomePage implements AfterViewInit {
   readonly isCalendarView = computed(() => this.activeSlide() === HOME_CONFIG.SLIDES.CALENDAR);
   readonly isDateTimeView = computed(() => this.activeSlide() === HOME_CONFIG.SLIDES.DATETIME);
 
-  @ViewChild('swiper', { static: false }) swiper?: ElementRef | undefined;
+  @ViewChild('swiper', { static: false }) swiper?: ElementRef;
   @ViewChild('calendar', { read: ElementRef, static: false }) calendar?: ElementRef;
 
   constructor() {
@@ -251,6 +249,8 @@ export class HomePage implements AfterViewInit {
   }
 
   private async getLastDate(): Promise<void> {
+    const fallbackDate = dayjs().endOf('month').subtract(1, 'day').toISOString();
+
     try {
       const lastFeed = await firstValueFrom(
         this.feedService.getLastDate().pipe(
@@ -259,8 +259,6 @@ export class HomePage implements AfterViewInit {
         )
       );
 
-      const fallbackDate = dayjs().endOf('month').subtract(1, 'day').toISOString();
-
       if (lastFeed?.date) {
         this.maxDate.set(dayjs(lastFeed.date.toDate()).endOf('month').subtract(1, 'day').toISOString());
       } else {
@@ -268,7 +266,7 @@ export class HomePage implements AfterViewInit {
       }
     } catch (error) {
       console.error('Error fetching last date:', error);
-      this.maxDate.set(dayjs().endOf('month').subtract(1, 'day').toISOString());
+      this.maxDate.set(fallbackDate);
     }
   }
 }
