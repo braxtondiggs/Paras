@@ -324,6 +324,21 @@ export class HorizontalCalendarComponent implements OnInit {
   }
 
   /**
+   * Accessible label for a day cell, including the parking suspension when there is one
+   */
+  public dayLabel(calendar: Calendar): string {
+    const notice = this.hasNotice(calendar, this.feeds()) ? ', parking suspended' : '';
+    return `Select ${calendar.day.long} ${calendar.day.num}${notice}`;
+  }
+
+  /**
+   * Check if a calendar date is the currently active (selected) day
+   */
+  public isSelected(calendar: Calendar): boolean {
+    return this.active()?.text === calendar.text;
+  }
+
+  /**
    * Check if a calendar date is today
    */
   public isToday(calendar: Calendar): boolean {

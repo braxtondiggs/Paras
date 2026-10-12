@@ -33,27 +33,25 @@
     >
       @for (item of items(); track item.text; let i = $index) {
         <swiper-slide class="swiper-slide">
-          <div
+          <button
+            type="button"
             [ngClass]="{
               'has-notice': hasNotice(item, feeds()),
-              'is-active': active()?.text === item.text,
+              'is-active': isSelected(item),
               'is-today': isToday(item)
             }"
             (click)="slideTo(i)"
-            (keydown.enter)="slideTo(i)"
-            (keydown.space)="slideTo(i)"
-            [attr.aria-label]="'Select ' + item.day.long + ' ' + item.day.num"
-            [attr.role]="'button'"
-            [attr.tabindex]="0"
+            [attr.aria-label]="dayLabel(item)"
+            [attr.aria-pressed]="isSelected(item)"
             class="ion-activatable ripple-parent calendar-day"
           >
-            <div class="day-short">{{ item.day.short }}</div>
-            <div class="day-number">{{ item.day.num }}</div>
+            <span class="day-short">{{ item.day.short }}</span>
+            <span class="day-number">{{ item.day.num }}</span>
             @if (hasNotice(item, feeds())) {
-              <div class="notice-indicator" aria-hidden="true"></div>
+              <span class="notice-indicator" aria-hidden="true"></span>
             }
             <ion-ripple-effect></ion-ripple-effect>
-          </div>
+          </button>
         </swiper-slide>
       }
     </swiper-container>

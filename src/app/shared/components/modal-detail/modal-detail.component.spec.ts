@@ -329,6 +329,27 @@ describe('ModalDetailComponent', () => {
     });
   });
 
+  describe('Accessibility', () => {
+    it('labels the close button', () => {
+      // Ionic moves aria-label from the host onto its inner native <button> when hydrated
+      const closeButton = spectator.query('ion-button');
+      expect(closeButton?.textContent?.trim()).toBe('Close');
+      expect(closeButton?.shadowRoot?.querySelector('button')?.getAttribute('aria-label')).toBe('Close');
+    });
+
+    it('exposes the title as a heading', () => {
+      const title = spectator.query('#modal-detail-title');
+      expect(title?.getAttribute('role')).toBe('heading');
+      expect(title?.getAttribute('aria-level')).toBe('1');
+    });
+
+    it('labels the content region with the title', () => {
+      const content = spectator.query('ion-content');
+      expect(content?.getAttribute('role')).toBe('region');
+      expect(content?.getAttribute('aria-labelledby')).toBe('modal-detail-title');
+    });
+  });
+
   describe('Analytics Tracking', () => {
     it('should track both screen view and dismiss events', async () => {
       jest.clearAllMocks();

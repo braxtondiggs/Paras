@@ -284,6 +284,75 @@ describe('HorizontalCalendarComponent', () => {
     });
   });
 
+  describe('Accessibility', () => {
+    const setupDayCells = () => {
+      const items = buildCalendarRange(1, 1);
+      // The component's own load effect replaces `feeds` with whatever getFeeds returns, so feed the notice through the mock
+      const suspendedFeed: Feed = { ...mockFeed, active: false, date: Timestamp.fromDate(items[2].date) };
+      mockFeedService.getFeeds.mockReturnValue(of([suspendedFeed]));
+      component.items.set(items);
+      component.active.set(items[1]);
+      component.isLoading.set(false);
+      fixture.detectChanges();
+      return items;
+    };
+
+    it('renders each day cell as a native button', () => {
+      setupDayCells();
+
+      const cells = spectator.queryAll<HTMLButtonElement>('button.calendar-day');
+      expect(cells.length).toBeGreaterThan(0);
+      cells.forEach(cell => {
+        expect(cell.tagName).toBe('BUTTON');
+        expect(cell.getAttribute('type')).toBe('button');
+        expect(cell.getAttribute('role')).toBeNull();
+        expect(cell.getAttribute('tabindex')).toBeNull();
+      });
+    });
+
+    it('marks only the active day with aria-pressed="true"', () => {
+      const items = setupDayCells();
+
+      expect(component.isSelected(items[1])).toBe(true);
+      expect(component.isSelected(items[0])).toBe(false);
+
+      const cells = spectator.queryAll<HTMLButtonElement>('button.calendar-day');
+      const pressed = cells.filter(cell => cell.getAttribute('aria-pressed') === 'true');
+      expect(pressed).toHaveLength(1);
+      expect(pressed[0].classList).toContain('is-active');
+    });
+
+    it('includes the parking suspension in the label of a day with a notice', () => {
+      setupDayCells();
+
+      const cells = spectator.queryAll<HTMLButtonElement>('button.calendar-day');
+      expect(cells[2].getAttribute('aria-label')).toContain(', parking suspended');
+      expect(cells[0].getAttribute('aria-label')).not.toContain('parking suspended');
+    });
+
+    it('keeps the notice indicator hidden from assistive technology', () => {
+      setupDayCells();
+
+      const indicator = spectator.query('.notice-indicator');
+      expect(indicator).toBeTruthy();
+      expect(indicator?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('does not attach duplicate keyboard handlers to day buttons', () => {
+      setupDayCells();
+      const slideToSpy = jest.spyOn(component, 'slideTo').mockImplementation();
+
+      // Native buttons turn Enter into a click, so a keydown handler would fire slideTo twice
+      const cell = spectator.queryAll<HTMLButtonElement>('button.calendar-day')[0];
+      cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      expect(slideToSpy).not.toHaveBeenCalled();
+
+      cell.click();
+      expect(slideToSpy).toHaveBeenCalledTimes(1);
+      expect(slideToSpy).toHaveBeenCalledWith(0);
+    });
+  });
+
   describe('Navigation Methods', () => {
     it('should not navigate when canNavigate is false', () => {
       component.isLoading.set(true);

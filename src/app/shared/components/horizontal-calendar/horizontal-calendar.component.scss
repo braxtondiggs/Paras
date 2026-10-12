@@ -16,7 +16,20 @@ ion-item {
 
 // Enhanced accessibility and interaction
 .calendar-day {
+  background: transparent;
+  border: 0;
+  color: inherit;
   cursor: pointer;
+  font: inherit;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
   transition:
     transform 0.2s ease,
     background-color 0.2s ease;
@@ -75,7 +88,7 @@ ion-item {
     background-color 0.2s ease,
     border-color 0.2s ease;
 
-  > div {
+  > .calendar-day {
     display: flex;
     flex: 1;
     flex-direction: column;
