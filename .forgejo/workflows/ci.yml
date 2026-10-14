@@ -13,23 +13,16 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  NODE_VERSION: '20'
-  FUNCTIONS_NODE_VERSION: '18'
-
 jobs:
   typecheck:
+    container:
+      image: node:20-bookworm # Node preinstalled: no setup-node download per job
     name: Typecheck
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
@@ -38,17 +31,14 @@ jobs:
         run: npx tsc --noEmit
 
   test:
+    container:
+      image: node:20-bookworm # Node preinstalled: no setup-node download per job
     name: Test
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
@@ -57,17 +47,14 @@ jobs:
         run: npm test -- --ci --forceExit --coverage
 
   build:
+    container:
+      image: node:20-bookworm # Node preinstalled: no setup-node download per job
     name: Build
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false || github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
@@ -88,17 +75,13 @@ jobs:
           fi
 
   functions:
+    container:
+      image: node:22-bookworm # Node preinstalled: no setup-node download per job
     name: Functions Lint & Build
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.FUNCTIONS_NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: functions/package-lock.json
 
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit
@@ -113,16 +96,13 @@ jobs:
         working-directory: functions
 
   security:
+    container:
+      image: node:20-bookworm # Node preinstalled: no setup-node download per job
     name: Security Audit
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
 
       - name: Audit app dependencies
         run: npm audit --audit-level=high
