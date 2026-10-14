@@ -80,13 +80,14 @@ Re-read the PR to get the new `head.sha`. Then merge through the API (the MCP se
 curl -sS -o /tmp/land-pr.json -w '%{http_code}' \
   -H "Authorization: token $FORGEJO_TOKEN_MCP" -H "Content-Type: application/json" \
   -X POST "https://git.braxt.in/api/v1/repos/braxton/Paras/pulls/<n>/merge" \
-  -d '{"Do":"<style>","head_commit_id":"<new head.sha>","delete_branch_after_merge":<true|false>}'
+  -d '{"Do":"<style>","head_commit_id":"<new head.sha, all 40 characters>","delete_branch_after_merge":<true|false>}'
 ```
 
-`head_commit_id` pins the merge to the commit you just reviewed; Forgejo refuses if the branch moved again.
-Expect HTTP 200. On 405 the PR is not mergeable (conflict, or a branch-protection rule): report the body and stop.
-Do not loop on a "not mergeable yet" status more than three times, ten seconds apart; Forgejo recomputes
-mergeability briefly after a force-push.
+`head_commit_id` pins the merge to the commit you just reviewed; Forgejo refuses if the branch moved again. It
+must be the full 40-character sha: a short sha is answered with 409 "head out of date".
+Expect HTTP 200. Right after a force-push Forgejo briefly recomputes mergeability and answers 405 with a body
+telling you to try again later: wait ten seconds and retry, at most three times. Any other 405 means the PR is
+not mergeable (conflict, or a branch-protection rule): report the body and stop.
 
 Verify: `mcp__forgejo__pull_request__get` shows `merged: true`; `git fetch origin <base.ref>` and confirm the
 commit subject appears at the tip of `origin/<base.ref>`.

@@ -35,6 +35,7 @@ jobs:
       AGENT_TIME_LIMIT: 25m
       MAX_FIX_ROUNDS: '2'
       CHECK_CMD: npm run typecheck && npm run lint:check && npm test && npx ng build --configuration development
+      FUNCTIONS_CHECK_CMD: npx tsc --noEmit && npm run lint # run inside functions/ only when the PR touches it
       CI: 'true'
       NX_DAEMON: 'false'
       DISABLE_AUTOUPDATER: '1'
