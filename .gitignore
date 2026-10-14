@@ -102,3 +102,6 @@ test-results/
 __tests__/
 *.spec.js
 *.test.js
+
+# Claude Code per-machine permission overrides
+.claude/settings.local.json

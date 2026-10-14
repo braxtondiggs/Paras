@@ -56,12 +56,12 @@ notify() {  # notify <title> <message> [priority: high|default|low]
   [ -n "${NOTIFY_WEBHOOK:-}" ] || return 0
   local auth=(); [ -n "${NOTIFY_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $NOTIFY_TOKEN")
   if [ "${NOTIFY_FORMAT:-ntfy}" = ntfy ]; then
-    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Title: $1" -H "Priority: ${3:-default}" -H "Click: $RUN_URL" -d "$2" "$NOTIFY_WEBHOOK" || echo 000)
+    code=$(curl -sS -o /tmp/notify-body -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Title: $1" -H "Priority: ${3:-default}" -H "Click: $RUN_URL" -d "$2" "$NOTIFY_WEBHOOK" || echo 000)
   else
-    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Content-Type: application/json" -d "$(jq -n --arg t "$1" --arg m "$2" --arg u "$RUN_URL" --arg p "${3:-default}" \
+    code=$(curl -sS -o /tmp/notify-body -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Content-Type: application/json" -d "$(jq -n --arg t "$1" --arg m "$2" --arg u "$RUN_URL" --arg p "${3:-default}" \
       '{title:$t, message:$m, text:($t+": "+$m), content:($t+": "+$m), url:$u, priority:$p}')" "$NOTIFY_WEBHOOK" || echo 000)
   fi
-  case "$code" in 2*) ;; *) echo "[notify] FAILED HTTP $code posting to NOTIFY_WEBHOOK (check URL/auth)";; esac
+  case "$code" in 2*) ;; *) echo "[notify] FAILED HTTP $code posting to NOTIFY_WEBHOOK (check URL/auth): $(head -c 200 /tmp/notify-body 2>/dev/null | tr -d '\n')";; esac
 }
 
 CURRENT=""   # issue number being worked; used by the trap
@@ -106,10 +106,12 @@ git config user.email "agent-bot@noreply.localhost"
 gitauth fetch -q origin
 
 # ---------- pick work ----------
-open_ai_prs=$(api "$API/pulls?state=open&limit=50" | jq '[.[] | select(.head.ref | startswith("ai/"))] | length')
+ai_prs=$(api "$API/pulls?state=open&limit=50" | jq -c '[.[] | select(.head.ref | startswith("ai/"))]')
+open_ai_prs=$(echo "$ai_prs" | jq length)
 slots=$(( PR_CAP - open_ai_prs ))
 if [ "$slots" -le 0 ]; then
   log "Cap reached: $open_ai_prs open ai/* PRs (cap $PR_CAP). Review some, then the next run continues."
+  notify "Paras agent: run skipped, PR cap" "$open_ai_prs open ai/ PR(s) ($(echo "$ai_prs" | jq -r 'map("#\(.number)") | join(", ")')), cap $PR_CAP. Land or close one and the next run continues." low
   exit 0
 fi
 take=$(( slots < MAX_ISSUES ? slots : MAX_ISSUES ))
@@ -128,7 +130,11 @@ mapfile -t QUEUE < <(api "$API/issues?state=open&type=issues&labels=ai-ready&lim
   | sort_by(prio, .number) | .[0:$k] | .[].number')
 
 log "Open ai/* PRs: $open_ai_prs/$PR_CAP. Taking ${#QUEUE[@]} issue(s): ${QUEUE[*]:-none}"
-[ "${#QUEUE[@]}" -eq 0 ] && { log "Nothing to do."; exit 0; }
+if [ "${#QUEUE[@]}" -eq 0 ]; then
+  log "Nothing to do."
+  notify "Paras agent: queue empty" "No ai-ready issue to take ($open_ai_prs/$PR_CAP ai/ PRs open). Run /triage to queue some." low
+  exit 0
+fi
 
 # Cheap auth check now that there is work (skipped on idle scheduled runs): an expired/revoked token (or an exhausted subscription
 # window) is the most likely way this pipeline silently stops working.

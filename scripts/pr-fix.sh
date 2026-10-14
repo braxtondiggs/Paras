@@ -2,7 +2,7 @@
 # Review-fix loop: address review findings on an ai/* PR with Claude Code (headless), push a fix commit,
 # label the PR ai-handed-off. Env (from .forgejo/workflows/pr-fix.yml): TOKEN, API, PR_NUMBER, REVIEW_ID,
 # CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY. Optional: AGENT_MODEL, AGENT_EFFORT, AGENT_TIME_LIMIT,
-# MAX_FIX_ROUNDS, CHECK_CMD, NOTIFY_WEBHOOK, NOTIFY_FORMAT.
+# MAX_FIX_ROUNDS, CHECK_CMD, FUNCTIONS_CHECK_CMD, NOTIFY_WEBHOOK, NOTIFY_FORMAT.
 set -uo pipefail
 
 : "${TOKEN:?AGENT_TOKEN secret not set}"; : "${API:?}"; : "${PR_NUMBER:?}"
@@ -16,6 +16,7 @@ EFFORT="${AGENT_EFFORT:-high}"
 TIME_LIMIT="${AGENT_TIME_LIMIT:-25m}"
 MAX_ROUNDS="${MAX_FIX_ROUNDS:-2}"
 CHECK_CMD="${CHECK_CMD:-npm run typecheck && npm run lint:check && npm test}"
+FUNCTIONS_CHECK_CMD="${FUNCTIONS_CHECK_CMD:-npx tsc --noEmit && npm run lint}"  # inside functions/, only if the PR touches it
 L_HANDED_OFF="ai-handed-off"
 PROTECTED_RE='^(capacitor\.config\.json|.*environment\.prod\.ts|firestore\.rules|\.firebaserc|ios/|android/|\.forgejo/|scripts/(agent|pr-review|pr-fix|release-cut|release-tag)\.sh|AGENTS\.md|CLAUDE\.md)'
 AGENT_TOOLS='Bash(npm install*),Bash(npm i *),Bash(npm uninstall*),Bash(npm ci*),Bash(npm run typecheck*),Bash(npm run lint*),Bash(npm run test*),Bash(npm test*),Bash(npx tsc*),Bash(npx eslint*),Bash(npx prettier*),Bash(npx jest*),Bash(npx ng build*),Bash(git diff*),Bash(git status*),Bash(git log*),Bash(git show*),Bash(git ls-files*),Bash(ls*),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(rg *),Bash(find *),Bash(wc *),Bash(sed -n *),Bash(mkdir *)'
@@ -28,12 +29,12 @@ notify() {
   [ -n "${NOTIFY_WEBHOOK:-}" ] || return 0
   local auth=(); [ -n "${NOTIFY_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $NOTIFY_TOKEN")
   if [ "${NOTIFY_FORMAT:-ntfy}" = ntfy ]; then
-    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Title: $1" -H "Priority: ${3:-default}" -H "Click: $RUN_URL" -d "$2" "$NOTIFY_WEBHOOK" || echo 000)
+    code=$(curl -sS -o /tmp/notify-body -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Title: $1" -H "Priority: ${3:-default}" -H "Click: $RUN_URL" -d "$2" "$NOTIFY_WEBHOOK" || echo 000)
   else
-    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Content-Type: application/json" -d "$(jq -n --arg t "$1" --arg m "$2" --arg u "$RUN_URL" --arg p "${3:-default}" \
+    code=$(curl -sS -o /tmp/notify-body -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Content-Type: application/json" -d "$(jq -n --arg t "$1" --arg m "$2" --arg u "$RUN_URL" --arg p "${3:-default}" \
       '{title:$t, message:$m, text:($t+": "+$m), content:($t+": "+$m), url:$u, priority:$p}')" "$NOTIFY_WEBHOOK" || echo 000)
   fi
-  case "$code" in 2*) ;; *) echo "[notify] FAILED HTTP $code posting to NOTIFY_WEBHOOK (check URL/auth)";; esac
+  case "$code" in 2*) ;; *) echo "[notify] FAILED HTTP $code posting to NOTIFY_WEBHOOK (check URL/auth): $(head -c 200 /tmp/notify-body 2>/dev/null | tr -d '\n')";; esac
 }
 comment() { api -X POST "$API/issues/$PR_NUMBER/comments" -d "$(jq -n --arg b "$1" '{body:$b}')" >/dev/null; }
 
@@ -101,11 +102,13 @@ ${inline:-(none)}
    explicitly asked for what is being flagged, do not change code for it and say so in the response.
 2. Keep the PR's purpose unchanged. No refactors beyond what the findings ask. Dependency changes only if a finding requires one, and say so in response.md.
 3. Run: $CHECK_CMD — and fix any failures you caused. \`npm run lint\` and \`npx prettier --write <files>\` are fine.
+   If you changed anything under functions/, also run inside functions/: npm ci && $FUNCTIONS_CHECK_CMD
 4. Write $out/response.md: one bullet per finding, starting with "Fixed:" or "Not changed:" and one sentence why.
 Do not run git commit or git push (denied anyway).
 EOF
+SID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen)   # shared with the repair turn below
 timeout "$TIME_LIMIT" claude -p --allowedTools "$AGENT_TOOLS" --add-dir "$out" --output-format json --permission-mode acceptEdits \
-  --model "$MODEL" --effort "$EFFORT" "$(cat "$out/prompt.txt")" </dev/null >"$out/agent.json" 2>"$out/agent.err"
+  --model "$MODEL" --effort "$EFFORT" --session-id "$SID" "$(cat "$out/prompt.txt")" </dev/null >"$out/agent.json" 2>"$out/agent.err"
 rc=$?
 jq -r '.result // ""' "$out/agent.json" 2>/dev/null | tail -n 20; tail -n 5 "$out/agent.err"
 turns=$(jq -r '.num_turns // "?"' "$out/agent.json" 2>/dev/null); cost=$(jq -r '.total_cost_usd // 0' "$out/agent.json" 2>/dev/null | awk '{ printf "%.3f", $1 }')
@@ -126,7 +129,45 @@ if git diff --cached --name-only | grep -qE "$PROTECTED_RE"; then
   notify "Paras pr-fix: PR #$PR_NUMBER needs a human" "Fix round $round touched protected files/dependencies and was discarded." ; exit 0
 fi
 
-if bash -c "$CHECK_CMD" </dev/null >"$out/checks.log" 2>&1; then checks="✅ checks passing"; else checks="❌ checks failing after the fix — see job log"; tail -n 40 "$out/checks.log"; fi
+# --- checks (root, plus functions/ when the PR touches it), with one repair turn; a red fix is never pushed ---
+run_checks() {
+  bash -c "$CHECK_CMD" </dev/null >"$out/checks.log" 2>&1 || return 1
+  if git diff --cached --name-only "origin/$base_ref" | grep -q '^functions/'; then
+    log "PR touches functions/; running functions checks too."
+    ( cd functions && npm ci --no-audit --no-fund && bash -c "$FUNCTIONS_CHECK_CMD" ) </dev/null >>"$out/checks.log" 2>&1 || return 1
+  fi
+}
+if ! run_checks; then
+  log "Checks failed after the fix; giving the agent one attempt to repair."
+  timeout "$TIME_LIMIT" claude -p --allowedTools "$AGENT_TOOLS" --add-dir "$out" --output-format json --permission-mode acceptEdits \
+    --model "$MODEL" --effort "$EFFORT" --resume "$SID" "The checks are failing after your review fixes. Repair them without changing what the fixes do; follow AGENTS.md.
+If you touched functions/, also run inside functions/: npm ci && $FUNCTIONS_CHECK_CMD. Failing output (tail):
+\`\`\`
+$(tail -n 80 "$out/checks.log")
+\`\`\`" </dev/null >"$out/agent2.json" 2>>"$out/agent.err"
+  turns=$(( ${turns/\?/0} + $(jq -r '.num_turns // 0' "$out/agent2.json" 2>/dev/null || echo 0) ))
+  cost=$(jq -r '.total_cost_usd // 0' "$out/agent.json" "$out/agent2.json" 2>/dev/null | awk '{ s += $1 } END { printf "%.3f", s }')
+  git ls-files --others --exclude-standard | grep -E '^[^/]+\.md$|\.(bak|orig|rej|tmp)$|~$' | xargs -r rm -f
+  git add -A
+  if git diff --cached --name-only | grep -qE "$PROTECTED_RE"; then
+    git reset -q --hard; log "Repair touched protected files; discarded."
+    comment "🤖 The automated fix for the review by @$rwho touched protected files while repairing failing checks, so it was discarded. Needs a human."
+    notify "Paras pr-fix: PR #$PR_NUMBER needs a human" "Fix round $round touched protected files/dependencies and was discarded." ; exit 0
+  fi
+  if ! run_checks; then
+    git reset -q --hard
+    log "Checks still red after the repair; nothing pushed."
+    comment "🤖 Tried to address the review by @$rwho (round $round/$MAX_ROUNDS) but the checks stayed red, so nothing was pushed. Needs a human.
+
+\`\`\`
+$(tail -n 40 "$out/checks.log")
+\`\`\`"
+    api -X POST "$API/issues/$PR_NUMBER/labels" -d "$(jq -n --arg l "$L_HANDED_OFF" '{labels:[$l]}')" >/dev/null
+    notify "Paras pr-fix: PR #$PR_NUMBER checks red after fix" "Round $round discarded; nothing pushed. $pr_url" high
+    exit 0
+  fi
+fi
+checks="✅ checks passing"
 
 git commit -qm "fix(review): address review feedback (round $round)" -m "Review $rid by $rwho on #$PR_NUMBER"
 if ! gitauth push -q origin "$head_ref" 2>"$out/push.log"; then
