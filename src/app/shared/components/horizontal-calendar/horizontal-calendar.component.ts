@@ -23,7 +23,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
-import { FeedService, type Feed } from '@core/services';
+import { FeedService, LoggerService, type Feed } from '@core/services';
 import { Calendar } from '@shared/interfaces';
 import { CardDetailComponent } from '../card-detail/card-detail.component';
 
@@ -65,6 +65,7 @@ export class HorizontalCalendarComponent implements OnInit {
 
   // Injected dependencies
   private readonly feedService = inject(FeedService);
+  private readonly logger = inject(LoggerService);
   private readonly loadingController = inject(LoadingController);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -120,7 +121,7 @@ export class HorizontalCalendarComponent implements OnInit {
 
       if (active && dateRange && !this.isLoading()) {
         this.loadData().catch(error => {
-          console.error('Effect data loading failed:', error);
+          this.logger.error('Effect data loading failed:', error);
           this.handleError('Failed to load calendar data');
         });
       }
@@ -142,7 +143,7 @@ export class HorizontalCalendarComponent implements OnInit {
     try {
       await this.initializeComponent();
     } catch (error) {
-      console.error('Failed to initialize horizontal calendar:', error);
+      this.logger.error('Failed to initialize horizontal calendar:', error);
       this.handleError('Failed to initialize calendar');
     }
   }
@@ -184,7 +185,7 @@ export class HorizontalCalendarComponent implements OnInit {
   private handleError(message: string): void {
     this.error.set(message);
     this.isLoading.set(false);
-    this.loadingElement?.dismiss().catch(console.error);
+    this.loadingElement?.dismiss().catch(err => this.logger.error('Failed to dismiss loading', err));
   }
 
   /**
@@ -213,7 +214,7 @@ export class HorizontalCalendarComponent implements OnInit {
       // Load more dates if approaching boundaries
       await this.handleBoundarySliding(index, items.length);
     } catch (error) {
-      console.error('Failed to handle slide change:', error);
+      this.logger.error('Failed to handle slide change:', error);
       this.handleError('Failed to update calendar');
     } finally {
       this.isSliding.set(false);
@@ -233,7 +234,7 @@ export class HorizontalCalendarComponent implements OnInit {
       swiperInstance.slideTo(index, speed);
       this.updateActiveDate(index);
     } catch (error) {
-      console.error('Failed to slide to index:', index, error);
+      this.logger.error('Failed to slide to index:', index, error);
     }
   }
 
@@ -249,7 +250,7 @@ export class HorizontalCalendarComponent implements OnInit {
     try {
       swiperInstance.slideNext();
     } catch (error) {
-      console.error('Failed to slide next:', error);
+      this.logger.error('Failed to slide next:', error);
     }
   }
 
@@ -265,7 +266,7 @@ export class HorizontalCalendarComponent implements OnInit {
     try {
       swiperInstance.slidePrev();
     } catch (error) {
-      console.error('Failed to slide previous:', error);
+      this.logger.error('Failed to slide previous:', error);
     }
   }
 
@@ -318,7 +319,7 @@ export class HorizontalCalendarComponent implements OnInit {
       const item = this.getSelectedItem(calendar, feeds);
       return item ? !item.active : false;
     } catch (error) {
-      console.error('Failed to check notice status:', error);
+      this.logger.error('Failed to check notice status:', error);
       return false;
     }
   }
@@ -347,7 +348,7 @@ export class HorizontalCalendarComponent implements OnInit {
     try {
       return dayjs(calendar.date).isSame(dayjs(), 'day');
     } catch (error) {
-      console.error('Failed to check if date is today:', error);
+      this.logger.error('Failed to check if date is today:', error);
       return false;
     }
   }
@@ -364,7 +365,7 @@ export class HorizontalCalendarComponent implements OnInit {
         return dayjs(item.date.toDate()).isSame(calendar.date, 'day');
       });
     } catch (error) {
-      console.error('Failed to get selected item:', error);
+      this.logger.error('Failed to get selected item:', error);
       return undefined;
     }
   }
@@ -386,7 +387,7 @@ export class HorizontalCalendarComponent implements OnInit {
       this.items.set([...items, ...newItems]);
       this.updateSwiperAfterDelay();
     } catch (error) {
-      console.error('Failed to load more dates at end:', error);
+      this.logger.error('Failed to load more dates at end:', error);
     } finally {
       this.isUpdatingSwiper = false;
     }
@@ -415,7 +416,7 @@ export class HorizontalCalendarComponent implements OnInit {
       // Update swiper and maintain position
       this.updateSwiperWithPositionCorrection(currentIndex, newItems.length);
     } catch (error) {
-      console.error('Failed to load more dates at start:', error);
+      this.logger.error('Failed to load more dates at start:', error);
     } finally {
       this.isUpdatingSwiper = false;
     }
@@ -466,7 +467,7 @@ export class HorizontalCalendarComponent implements OnInit {
 
       return dates;
     } catch (error) {
-      console.error('Failed to generate date range:', error);
+      this.logger.error('Failed to generate date range:', error);
       return [];
     }
   }
@@ -504,14 +505,14 @@ export class HorizontalCalendarComponent implements OnInit {
               }
             },
             error: (error: unknown) => {
-              console.error('Failed to load calendar data:', error);
+              this.logger.error('Failed to load calendar data:', error);
               this.handleError('Failed to load parking data');
               reject(error);
             }
           });
       });
     } catch (error) {
-      console.error('Failed to load calendar data:', error);
+      this.logger.error('Failed to load calendar data:', error);
       this.handleError('Failed to load parking data');
     }
   }
@@ -546,7 +547,7 @@ export class HorizontalCalendarComponent implements OnInit {
    */
   private finalizeLoading(): void {
     this.isLoading.set(false);
-    this.loadingElement?.dismiss().catch(console.error);
+    this.loadingElement?.dismiss().catch(err => this.logger.error('Failed to dismiss loading', err));
   }
 
   /**

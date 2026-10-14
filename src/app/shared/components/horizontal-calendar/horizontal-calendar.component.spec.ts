@@ -1,6 +1,6 @@
 import type { ComponentFixture } from '@angular/core/testing';
 import { Timestamp } from '@angular/fire/firestore';
-import { FeedService, type Feed } from '@core/services';
+import { FeedService, LoggerService, type Feed } from '@core/services';
 import { LoadingController } from '@ionic/angular/standalone';
 import { createComponentFactory, type Spectator } from '@ngneat/spectator/jest';
 import type { Calendar } from '@shared/interfaces';
@@ -45,12 +45,22 @@ describe('HorizontalCalendarComponent', () => {
     getFeeds: jest.fn().mockReturnValue(of([mockFeed]))
   };
 
+  const mockLogger = {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn()
+  };
+
   const createComponent = createComponentFactory({
     component: HorizontalCalendarComponent,
     providers: [
       {
         provide: FeedService,
         useValue: mockFeedService
+      },
+      {
+        provide: LoggerService,
+        useValue: mockLogger
       },
       {
         provide: LoadingController,
@@ -66,6 +76,9 @@ describe('HorizontalCalendarComponent', () => {
     mockLoadingElement.dismiss.mockClear().mockReturnValue(Promise.resolve(true));
     mockLoadingController.create.mockClear().mockResolvedValue(mockLoadingElement);
     mockFeedService.getFeeds.mockClear().mockReturnValue(of([mockFeed]));
+    mockLogger.log.mockClear();
+    mockLogger.warn.mockClear();
+    mockLogger.error.mockClear();
 
     spectator = createComponent();
     component = spectator.component;
@@ -177,9 +190,6 @@ describe('HorizontalCalendarComponent', () => {
     });
 
     it('should handle initialization errors gracefully', async () => {
-      // Mock console.error to avoid cluttering test output
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
       // Set up error condition before creating component
       jest.clearAllMocks();
       mockLoadingController.create.mockRejectedValue(new Error('Loading failed'));
@@ -189,12 +199,9 @@ describe('HorizontalCalendarComponent', () => {
 
       await freshComponent.ngOnInit();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to initialize horizontal calendar:', expect.any(Error));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to initialize horizontal calendar:', expect.any(Error));
       expect(freshComponent.error()).toBe('Failed to initialize calendar');
       expect(freshComponent.isLoading()).toBe(false);
-
-      // Restore console.error
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -407,9 +414,6 @@ describe('HorizontalCalendarComponent', () => {
 
   describe('Error Handling', () => {
     it('should set error state when data loading fails', async () => {
-      // Mock console.error to avoid cluttering test output
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
       const feedService = spectator.inject(FeedService);
       jest.spyOn(feedService, 'getFeeds').mockReturnValue(throwError(() => new Error('Network error')));
 
@@ -417,14 +421,9 @@ describe('HorizontalCalendarComponent', () => {
 
       expect(component.error()).toBeTruthy();
       expect(component.isLoading()).toBe(false);
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should handle errors during data loading', async () => {
-      // Mock console.error to avoid cluttering test output
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-
       const feedService = spectator.inject(FeedService);
       jest.spyOn(feedService, 'getFeeds').mockReturnValue(throwError(() => new Error('Failed')));
 
@@ -432,8 +431,6 @@ describe('HorizontalCalendarComponent', () => {
 
       expect(component.error()).toBeTruthy();
       expect(component.isLoading()).toBe(false);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -708,7 +705,6 @@ describe('HorizontalCalendarComponent', () => {
 
   describe('Robustness', () => {
     it('hasNotice returns false when feed evaluation throws', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const problematicFeed = {
         ...mockFeed,
         active: false,
@@ -727,9 +723,7 @@ describe('HorizontalCalendarComponent', () => {
       } as Calendar;
 
       expect(component.hasNotice(calendar, [problematicFeed])).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to get selected item:', expect.any(Error));
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to get selected item:', expect.any(Error));
     });
 
     it('createCalendarItem throws on invalid dates', () => {
@@ -737,7 +731,6 @@ describe('HorizontalCalendarComponent', () => {
     });
 
     it('getDatesBetween returns empty array when calendar creation fails', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
       const spy = jest.spyOn(component as any, 'createCalendarItem').mockImplementation(() => {
         throw new Error('creation failed');
       });
@@ -745,9 +738,8 @@ describe('HorizontalCalendarComponent', () => {
       const results = (component as any).getDatesBetween(dayjs(), dayjs().add(1, 'day'));
 
       expect(results).toEqual([]);
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to generate date range:', expect.any(Error));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to generate date range:', expect.any(Error));
 
-      consoleSpy.mockRestore();
       spy.mockRestore();
     });
   });
