@@ -34,8 +34,9 @@ FUNCTIONS_CHECK_CMD="${FUNCTIONS_CHECK_CMD:-npx tsc --noEmit && npm run lint}"  
 REVIEW_PASS="${REVIEW_PASS:-1}"        # 1 = second pass reviewing its own diff
 
 # What the agent may run without asking. Edits are auto-accepted inside the repo (acceptEdits);
-# git commit/push, npm install, deploys etc. are simply not on the list, so they are denied.
-AGENT_TOOLS='Bash(npm run typecheck*),Bash(npm run lint*),Bash(npm run test*),Bash(npm test*),Bash(npx tsc*),Bash(npx eslint*),Bash(npx prettier*),Bash(npx jest*),Bash(npx ng build*),Bash(git diff*),Bash(git status*),Bash(git log*),Bash(git show*),Bash(git ls-files*),Bash(ls*),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(rg *),Bash(find *),Bash(wc *),Bash(sed -n *),Bash(mkdir *)'
+# git commit/push, deploys etc. are simply not on the list, so they are denied. npm install is allowed: the draft PR
+# is the review gate and dependency changes are called out in its body.
+AGENT_TOOLS='Bash(npm install*),Bash(npm i *),Bash(npm uninstall*),Bash(npm ci*),Bash(npm run typecheck*),Bash(npm run lint*),Bash(npm run test*),Bash(npm test*),Bash(npx tsc*),Bash(npx eslint*),Bash(npx prettier*),Bash(npx jest*),Bash(npx ng build*),Bash(git diff*),Bash(git status*),Bash(git log*),Bash(git show*),Bash(git ls-files*),Bash(ls*),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(rg *),Bash(find *),Bash(wc *),Bash(sed -n *),Bash(mkdir *)'
 
 # Files the agent must never change (from AGENTS.md "Always clarify" + "Out of scope").
 PROTECTED_RE='^(capacitor\.config\.json|.*environment\.prod\.ts|firestore\.rules|\.firebaserc|ios/|android/|\.forgejo/|scripts/(agent|pr-review|pr-fix|release-cut|release-tag)\.sh|AGENTS\.md|CLAUDE\.md)'
@@ -232,8 +233,10 @@ ${comments:-(no comments)}
 ## Outcomes other than a code change (ONLY if you edited no files at all)
 - Already done / nothing to change (e.g. the fix is already on $BASE): make NO changes. Write the evidence
   (what you checked, file + version/line) to $out/resolved.txt.
-- Needs a human (anything under "Always clarify before changing" or "Out of Scope for Agents", dependency
-  changes, or too ambiguous to implement safely): make NO changes. Write the reason to $out/blocked.txt.
+- Needs a human (anything under "Always clarify before changing" or "Out of Scope for Agents", or too ambiguous
+  to implement safely): make NO changes. Write the reason to $out/blocked.txt.
+Dependency changes are allowed when the issue calls for them: use \`npm install\`/\`npm uninstall\` so the lockfile
+stays consistent, prefer exact versions the issue names, and say in summary.md what changed and why.
 If you edited any file, do NOT write resolved.txt or blocked.txt; write commit-msg.txt and summary.md instead.
 "Partially resolved" in the discussion means the remaining items still need to be implemented.
 Never create report, summary, or documentation files (e.g. *_SUMMARY.md, *_CONFIRMATION.md) in the repo
@@ -290,9 +293,6 @@ $(tail -n 15 "$out/agent-implement.log")
 $bad
 \`\`\`"; continue
   fi
-  if git diff --cached --name-only | grep -qE '(^|/)package(-lock)?\.json$'; then
-    fail_issue "$n" "the agent changed dependencies (package.json / lockfile), which this pipeline doesn't allow. Add the dependency yourself or do this one manually."; continue
-  fi
 
   # --- checks, with one fix-up attempt ---
   run_checks() {
@@ -329,8 +329,8 @@ Re-run $CHECK_CMD if you change anything."
   else checks="❌ checks failing — see log below"; fi
 
   # re-check guards after the fix/review passes
-  if git diff --cached --name-only "origin/$BASE" | grep -qE "$PROTECTED_RE|(^|/)package(-lock)?\.json$"; then
-    fail_issue "$n" "a later pass touched protected files or dependencies."; continue
+  if git diff --cached --name-only "origin/$BASE" | grep -qE "$PROTECTED_RE"; then
+    fail_issue "$n" "a later pass touched protected files."; continue
   fi
 
   # --- commit, push, draft PR ---
@@ -353,6 +353,11 @@ Re-run $CHECK_CMD if you change anything."
 > ⚠️ The model also wrote a resolved/blocked note while making changes (read with care):
 $(echo "$agent_note" | sed 's/^/> /')"
   agent_stats="$MODEL (implement/fix) + $REVIEW_MODEL (review): $turns_total turns, ~\$$cost_total API-equivalent"
+  dep_files=$(git diff --cached --name-only "origin/$BASE" | grep -E '(^|/)package(-lock)?\.json$' || true)
+  [ -n "$dep_files" ] && summary="$summary
+
+> ⚠️ **Dependency files changed** (review before merging): $(echo "$dep_files" | tr '\n' ' ')
+> $(git diff --cached "origin/$BASE" -- $(echo "$dep_files" | grep -v lock) | grep -E '^[-+]\s+"' | grep -vE '^[-+]\s+"(name|version)"' | head -n 12 | sed 's/^/`/; s/$/`/' | tr '\n' ' ')"
   pr_body=$(printf '## Summary\n%s\n\n## Checks\n%s\n\nCloses #%s\n\n---\n_Draft opened by the agent (Claude Code). %s. Review before undrafting._\n\n<details><summary>Check output (tail)</summary>\n\n```\n%s\n```\n</details>' \
     "$summary" "$checks" "$n" "$agent_stats" "$(tail -n 40 "$out/checks.log")")
   pr=$(api -X POST "$API/pulls" -d "$(jq -n --arg h "$branch" --arg b "$BASE" --arg t "WIP: $msg" --arg body "$pr_body" \

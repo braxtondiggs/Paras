@@ -59,7 +59,7 @@ fails:
 - "Done when" is checkable by a test or a command.
 - Nothing under AGENTS.md "Always clarify before changing" / "Out of Scope for Agents": Firestore structure,
   notification default times, `capacitor.config.json`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules,
-  Firebase project ID. No dependency changes (the pipeline rejects `package.json` / lockfile edits).
+  Firebase project ID. Dependency changes are allowed; name the exact package and version in the issue.
 - Nothing that needs a device, a store, a credential, or a design decision.
 
 ## Step 4: Body
@@ -106,7 +106,7 @@ Fetch labels with `mcp__forgejo__issue_label__list` and use **only existing ones
 | docs only | `documentation` |
 
 Plus exactly one `priority: …` label, plus `ai-ready` when `--ai` and Step 3 passes. If Step 3 fails because the
-work is inherently not for the pipeline (deploys, `ios/`/`android/`, dependencies, `.forgejo/`, Firebase config,
+work is inherently not for the pipeline (deploys, `ios/`/`android/`, `.forgejo/`, Firebase config,
 design decisions), add `human-only` instead so `/triage` and the agent skip it. Never create labels.
 
 ## Step 6: Create and report

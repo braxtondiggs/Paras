@@ -55,7 +55,7 @@ A scheduled Forgejo Actions job (`.forgejo/workflows/agent.yml` → `scripts/age
 - Add or update tests for behavior you change (standalone components use Spectator).
 - Checks: `npm run typecheck && npm run lint && npm run test`. Fix failures you caused.
 - **Do not** run `git commit`, `git push`, create branches, or call the Forgejo API.
-- **Do not** add, remove or upgrade dependencies (`package.json` / lockfiles). The script rejects these changes.
+- Dependency changes are allowed when the issue asks for them: use `npm install` / `npm uninstall` so the lockfile stays consistent, and explain them in the PR summary (the PR body flags changed dependency files for review).
 - **Do not** edit: `capacitor.config.json`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules, `.forgejo/`, `scripts/agent.sh`, `AGENTS.md`, `CLAUDE.md`. The script rejects these changes.
 - Anything under "Always clarify before changing" or "Out of Scope for Agents", or an issue too ambiguous to implement safely: make **no** changes and write the reason to the `blocked.txt` path given in your prompt. A human will clarify.
 - MCP servers and slash commands listed below are **not available** to you. If the prompt points you at a `.claude/commands/*.md` playbook, read it as instructions instead.

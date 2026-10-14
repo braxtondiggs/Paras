@@ -18,7 +18,7 @@ MAX_ROUNDS="${MAX_FIX_ROUNDS:-2}"
 CHECK_CMD="${CHECK_CMD:-npm run typecheck && npm run lint:check && npm test}"
 L_HANDED_OFF="ai-handed-off"
 PROTECTED_RE='^(capacitor\.config\.json|.*environment\.prod\.ts|firestore\.rules|\.firebaserc|ios/|android/|\.forgejo/|scripts/(agent|pr-review|pr-fix|release-cut|release-tag)\.sh|AGENTS\.md|CLAUDE\.md)'
-AGENT_TOOLS='Bash(npm run typecheck*),Bash(npm run lint*),Bash(npm run test*),Bash(npm test*),Bash(npx tsc*),Bash(npx eslint*),Bash(npx prettier*),Bash(npx jest*),Bash(npx ng build*),Bash(git diff*),Bash(git status*),Bash(git log*),Bash(git show*),Bash(git ls-files*),Bash(ls*),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(rg *),Bash(find *),Bash(wc *),Bash(sed -n *),Bash(mkdir *)'
+AGENT_TOOLS='Bash(npm install*),Bash(npm i *),Bash(npm uninstall*),Bash(npm ci*),Bash(npm run typecheck*),Bash(npm run lint*),Bash(npm run test*),Bash(npm test*),Bash(npx tsc*),Bash(npx eslint*),Bash(npx prettier*),Bash(npx jest*),Bash(npx ng build*),Bash(git diff*),Bash(git status*),Bash(git log*),Bash(git show*),Bash(git ls-files*),Bash(ls*),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(rg *),Bash(find *),Bash(wc *),Bash(sed -n *),Bash(mkdir *)'
 
 api() { curl -sS -H "Authorization: token $TOKEN_VAL" -H "Content-Type: application/json" "$@"; }
 log() { echo "[pr-fix] $*"; }
@@ -99,7 +99,7 @@ ${inline:-(none)}
 ## What to do
 1. For each finding: fix it if it is correct and in scope for this PR. If it is wrong, out of scope, or the issue
    explicitly asked for what is being flagged, do not change code for it and say so in the response.
-2. Keep the PR's purpose unchanged. No refactors beyond what the findings ask. Do not touch package.json/lockfiles.
+2. Keep the PR's purpose unchanged. No refactors beyond what the findings ask. Dependency changes only if a finding requires one, and say so in response.md.
 3. Run: $CHECK_CMD — and fix any failures you caused. \`npm run lint\` and \`npx prettier --write <files>\` are fine.
 4. Write $out/response.md: one bullet per finding, starting with "Fixed:" or "Not changed:" and one sentence why.
 Do not run git commit or git push (denied anyway).
@@ -120,9 +120,9 @@ $(cat "$out/response.md" 2>/dev/null || echo "(no response written; agent exit $
   api -X POST "$API/issues/$PR_NUMBER/labels" -d "$(jq -n --arg l "$L_HANDED_OFF" '{labels:[$l]}')" >/dev/null
   exit 0
 fi
-if git diff --cached --name-only | grep -qE "$PROTECTED_RE|(^|/)package(-lock)?\.json$"; then
-  git reset -q --hard; log "Fix touched protected files or dependencies; discarded."
-  comment "🤖 The automated fix for the review by @$rwho touched protected files or dependencies, so it was discarded. Needs a human."
+if git diff --cached --name-only | grep -qE "$PROTECTED_RE"; then
+  git reset -q --hard; log "Fix touched protected files; discarded."
+  comment "🤖 The automated fix for the review by @$rwho touched protected files, so it was discarded. Needs a human."
   notify "Paras pr-fix: PR #$PR_NUMBER needs a human" "Fix round $round touched protected files/dependencies and was discarded." ; exit 0
 fi
 
