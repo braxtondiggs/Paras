@@ -105,7 +105,9 @@ Fetch labels with `mcp__forgejo__issue_label__list` and use **only existing ones
 | dependency / tooling version bump | `upgrade` |
 | docs only | `documentation` |
 
-Plus exactly one `priority: …` label, plus `ai-ready` when `--ai` and Step 3 passes. Never create labels.
+Plus exactly one `priority: …` label, plus `ai-ready` when `--ai` and Step 3 passes. If Step 3 fails because the
+work is inherently not for the pipeline (deploys, `ios/`/`android/`, dependencies, `.forgejo/`, Firebase config,
+design decisions), add `human-only` instead so `/triage` and the agent skip it. Never create labels.
 
 ## Step 6: Create and report
 
@@ -116,7 +118,7 @@ Create with `mcp__forgejo__issue__create` (owner `braxton`, repo `Paras`), then 
 #{number} {title}
 {url}
 Labels: {labels}
-Agent-ready: yes | no — {failing checklist item if no}
+Agent-ready: yes | no — {failing checklist item if no}{; labeled human-only if the work is inherently a developer's}
 Next: {if ai-ready: "queued; runs on the next 6-hourly schedule or Actions -> Local agent -> Run workflow (PR cap permitting)"}
       {else: "add `ai-ready` when you want the agent to take it, or /implement-issue {number} to do it here"}
 ```

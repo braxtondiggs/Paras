@@ -23,7 +23,8 @@ confirmation label them `ai-ready`. Arguments: $ARGUMENTS
    nothing runs until a PR merges or closes.
 2. Open issues via `mcp__forgejo__issue__list` (state `open`, limit 50). Drop any already labeled `ai-ready`,
    `ai-in-progress` or `ai-failed` from the candidates, but list them in a "queued / stuck" line so the user sees
-   the whole picture.
+   the whole picture. Also drop anything labeled `human-only` (a developer owns those; the pipeline ignores them
+   even if `ai-ready` is added) and summarize them in one "human-only" line with their priorities.
 3. For each remaining issue, read the body, and the comments via `mcp__forgejo__issue__comment_list` if there are
    any (a maintainer comment often narrows or kills the scope).
 4. `git fetch origin && git log --oneline -15 origin/dev` to know what just merged; an issue may already be done.
@@ -61,8 +62,10 @@ Print a short table of the top `--count` candidates:
   scope). Say in one line what's missing. Offer to rewrite the body (in the `/create-issue` format: Summary,
   Files, Change, Done when, Out of scope) before labeling; rewrite only after the user agrees, via
   `mcp__forgejo__issue__edit`, and keep the original text under a `<details>` block at the bottom.
-- **human**: worth doing but not for the agent (platform upgrades, native, Firebase config, design). Mention at
-  most two of these in one line so they aren't forgotten; don't count them toward `--count`.
+- **human**: worth doing but not for the agent (platform upgrades, native, Firebase config, deploys, dependency
+  changes, anything under `.forgejo/`, design calls). Mention at most two of these in one line so they aren't
+  forgotten; don't count them toward `--count`. Offer to apply the `human-only` label to them (via
+  `mcp__forgejo__issue__add_labels`) so they stop showing up as candidates; apply only after the user agrees.
 
 Then **ask** which to label (numbers, "all", or "none"). Do not label anything before the answer.
 
