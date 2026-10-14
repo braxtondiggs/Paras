@@ -48,6 +48,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
           NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
           NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }} # optional: ntfy access token (Bearer); leave unset for user:pass-in-URL or open topics
         # The script lives on master (the branch this workflow runs from), not on the dev checkout.
         run: |
           git fetch -q origin master

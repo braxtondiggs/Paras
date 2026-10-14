@@ -35,6 +35,7 @@ jobs:
           API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
           NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
           NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }} # optional: ntfy access token (Bearer); leave unset for user:pass-in-URL or open topics
         run: bash scripts/release-tag.sh
 
   android:
@@ -106,6 +107,7 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
           NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }} # optional: ntfy access token (Bearer); leave unset for user:pass-in-URL or open topics
           VERSION: ${{ needs.tag.outputs.version }}
         run: |
           if [ -z "$FIREBASE_TOKEN" ]; then

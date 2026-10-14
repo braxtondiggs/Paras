@@ -60,6 +60,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
           NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }} # optional: ntfy access token (Bearer); leave unset for user:pass-in-URL or open topics
         # Always run the script from master so a PR cannot change how it gets fixed.
         run: |
           git fetch -q origin master

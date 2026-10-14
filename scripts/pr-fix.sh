@@ -26,12 +26,14 @@ RUN_URL="${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN
 notify() {
   echo "$1 — $2" >>/tmp/agent-notify.log
   [ -n "${NOTIFY_WEBHOOK:-}" ] || return 0
+  local auth=(); [ -n "${NOTIFY_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $NOTIFY_TOKEN")
   if [ "${NOTIFY_FORMAT:-ntfy}" = ntfy ]; then
-    curl -sS -o /dev/null --max-time 15 -H "Title: $1" -H "Priority: ${3:-default}" -H "Click: $RUN_URL" -d "$2" "$NOTIFY_WEBHOOK"
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Title: $1" -H "Priority: ${3:-default}" -H "Click: $RUN_URL" -d "$2" "$NOTIFY_WEBHOOK" || echo 000)
   else
-    curl -sS -o /dev/null --max-time 15 -H "Content-Type: application/json" -d "$(jq -n --arg t "$1" --arg m "$2" --arg u "$RUN_URL" --arg p "${3:-default}" \
-      '{title:$t, message:$m, text:($t+": "+$m), content:($t+": "+$m), url:$u, priority:$p}')" "$NOTIFY_WEBHOOK"
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Content-Type: application/json" -d "$(jq -n --arg t "$1" --arg m "$2" --arg u "$RUN_URL" --arg p "${3:-default}" \
+      '{title:$t, message:$m, text:($t+": "+$m), content:($t+": "+$m), url:$u, priority:$p}')" "$NOTIFY_WEBHOOK" || echo 000)
   fi
+  case "$code" in 2*) ;; *) echo "[notify] FAILED HTTP $code posting to NOTIFY_WEBHOOK (check URL/auth)";; esac
 }
 comment() { api -X POST "$API/issues/$PR_NUMBER/comments" -d "$(jq -n --arg b "$1" '{body:$b}')" >/dev/null; }
 
