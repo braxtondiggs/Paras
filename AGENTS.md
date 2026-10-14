@@ -10,7 +10,7 @@ This file documents how AI agents (Claude Code, Claude API, GitHub Actions Claud
 
 ## Automated Review Agent (claude-code-review.yml)
 
-Runs on every PR. Allowed tools: `npm run test`, `npm run lint`, `npm run typecheck`.
+Runs on every PR. Allowed tools: `npm run typecheck`, `npm run lint:check`, `npm run test`.
 
 **Review priorities (in order):**
 
@@ -42,23 +42,27 @@ When mentioned in issues or PRs, the agent has read access to the repo.
 - `capacitor.config.json` App ID (changing `com.cymbit.paras` breaks store listings)
 - `environment.prod.ts` Firebase config values
 
-## Local Autonomous Agent (Pi)
+## Local Autonomous Agent (Claude Code, headless)
 
-A scheduled Forgejo Actions job (`.forgejo/workflows/agent.yml` → `scripts/agent.sh`) works issues labeled `ai-ready` using the Pi coding agent and a local model (Qwen3-Coder 30B on the Mac mini). It runs unattended: **nobody is available to answer questions mid-run.**
+A scheduled Forgejo Actions job (`.forgejo/workflows/agent.yml` → `scripts/agent.sh`, both on `master`) works issues labeled `ai-ready` by running Claude Code in print mode (`claude -p`) inside the job container. Opus implements and fixes, Sonnet does the self-review (`AGENT_MODEL` / `REVIEW_MODEL` in the workflow); auth is the `CLAUDE_CODE_OAUTH_TOKEN` secret from `claude setup-token`. It runs unattended: **nobody is available to answer questions mid-run.** The prompt tells the agent to read this file first, so keep the name `AGENTS.md`.
 
-**How it works:** the script picks up to 2 `ai-ready` issues by `priority/*` label, labels them `ai-in-progress`, runs Pi on a fresh `ai/issue-N-<slug>` branch off `dev`, runs checks, does a self-review pass, then opens a **draft** (`WIP:`) PR. Failures get `ai-failed` and a comment. It stops if 2 `ai/*` PRs are already open. The script handles git, labels and PRs — Pi only edits files and runs commands.
+**How it works:** the script picks up to 2 `ai-ready` issues by `priority: *` label (urgent → high → medium → low), labels them `ai-in-progress`, runs the agent on a fresh `ai/issue-N-<slug>` branch off `dev`, runs checks, does a self-review pass, then opens a **draft** (`WIP:`) PR. Failures get `ai-failed` and a comment. It stops if 2 `ai/*` PRs are already open. The script handles git, labels and PRs — the agent only edits files and runs commands. Permissions are `acceptEdits` plus a Bash allow-list (`npm run/test`, `npx tsc/eslint/prettier/jest`, read-only `git`, `ls/cat/grep/...`); anything else, including `git commit`, `git push` and `npm install`, is denied.
 
-**Rules for Pi:**
+**After the PR:** `pr-review.yml` has Sonnet review every PR and post a Forgejo review. On `ai/*` branches with findings it dispatches `pr-fix.yml`, which resumes the agent on the branch to address each finding, pushes a `fix(review):` commit and labels the PR `ai-handed-off`; at most 2 fix rounds per branch, then a human takes over. Write agent-ready issues with `/create-issue` (`.claude/commands/create-issue.md`).
+
+**Rules for the agent:**
 
 - Work only on the issue you were given. Smallest change that fully resolves it; no drive-by refactors.
 - Read the relevant files before editing. Follow "Coding Guidance for Agents" below.
 - Add or update tests for behavior you change (standalone components use Spectator).
-- Checks: `npm run typecheck && npm run lint && npm run test`. Fix failures you caused.
+- Checks: `npm run typecheck && npm run lint:check && npm test && npx ng build --configuration development` (the build is what type-checks templates). Fix failures you caused. You may run `npm run lint`
+  (eslint `--fix`) and `npx prettier --write <files you changed>` to auto-fix formatting before the checks. Do not run
+  `npm run build` (it runs `cap sync`) or `npm run format` (it rewrites the whole repo).
 - **Do not** run `git commit`, `git push`, create branches, or call the Forgejo API.
 - **Do not** add, remove or upgrade dependencies (`package.json` / lockfiles). The script rejects these changes.
 - **Do not** edit: `capacitor.config.json`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules, `.forgejo/`, `scripts/agent.sh`, `AGENTS.md`, `CLAUDE.md`. The script rejects these changes.
 - Anything under "Always clarify before changing" or "Out of Scope for Agents", or an issue too ambiguous to implement safely: make **no** changes and write the reason to the `blocked.txt` path given in your prompt. A human will clarify.
-- MCP servers and slash commands listed below are **not available** to you. If the prompt points you at a `.claude/commands/*.md` playbook, read it as instructions instead.
+- MCP servers and slash commands listed below are **not available** in the unattended job.
 - Don't run deploys, `cap sync`, emulators, or anything that touches Firebase or the network beyond `npm`.
 
 ## Custom Slash Commands
