@@ -6,6 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AlertController, Platform } from '@ionic/angular/standalone';
 import { createComponentFactory, type Spectator } from '@ngneat/spectator/jest';
 import { Subject } from 'rxjs';
+import { ThemeService } from '@core/services';
 import { AppComponent } from './app.component';
 
 // Mock Capacitor modules
@@ -404,35 +405,38 @@ describe('AppComponent', () => {
 
       expect(mockSetUserProperties).toHaveBeenCalledWith(mockAnalytics, { darkMode: 'true' });
     });
+
+    it('should delegate the system preference to ThemeService when no preference is saved', async () => {
+      mockPreferences.get.mockResolvedValue({ value: null });
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: jest.fn().mockReturnValue({ matches: true })
+      });
+      const setDarkSpy = jest.spyOn(spectator.inject(ThemeService), 'setDark');
+
+      await (component as any).setTheme();
+
+      expect(setDarkSpy).toHaveBeenCalledWith(true);
+    });
+
+    it('should delegate the saved preference to ThemeService over the system preference', async () => {
+      mockPreferences.get.mockResolvedValue({ value: 'false' });
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: jest.fn().mockReturnValue({ matches: true })
+      });
+      const setDarkSpy = jest.spyOn(spectator.inject(ThemeService), 'setDark');
+
+      await (component as any).setTheme();
+
+      expect(setDarkSpy).toHaveBeenCalledWith(false);
+    });
   });
 
-  describe('toggleDarkTheme', () => {
-    it('should add dark class when enabled', async () => {
-      await (component as any).toggleDarkTheme(true);
+  describe('isDarkMode', () => {
+    it('reflects the shared ThemeService state', async () => {
+      await spectator.inject(ThemeService).setDark(true);
 
-      expect(component.isDarkMode()).toBe(true);
-      expect(document.body.classList.contains('dark')).toBe(true);
-      expect(mockPreferences.set).toHaveBeenCalledWith({ key: 'darkMode', value: 'true' });
-    });
-
-    it('should remove dark class when disabled', async () => {
-      document.body.classList.add('dark');
-
-      await (component as any).toggleDarkTheme(false);
-
-      expect(component.isDarkMode()).toBe(false);
-      expect(document.body.classList.contains('dark')).toBe(false);
-      expect(mockPreferences.set).toHaveBeenCalledWith({ key: 'darkMode', value: 'false' });
-    });
-
-    it('should toggle multiple times correctly', async () => {
-      await (component as any).toggleDarkTheme(true);
-      expect(component.isDarkMode()).toBe(true);
-
-      await (component as any).toggleDarkTheme(false);
-      expect(component.isDarkMode()).toBe(false);
-
-      await (component as any).toggleDarkTheme(true);
       expect(component.isDarkMode()).toBe(true);
     });
   });

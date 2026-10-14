@@ -12,6 +12,7 @@ import { Network } from '@capacitor/network';
 import { Preferences } from '@capacitor/preferences';
 import { PushNotifications, Token } from '@capacitor/push-notifications';
 import { AlertController, IonApp, IonRouterOutlet, Platform } from '@ionic/angular/standalone';
+import { ThemeService } from '@core/services';
 import { register } from 'swiper/element/bundle';
 
 register();
@@ -28,10 +29,11 @@ export class AppComponent implements OnInit {
   private readonly analytics = inject(Analytics);
   private readonly alert = inject(AlertController);
   private readonly platform = inject(Platform);
+  private readonly themeService = inject(ThemeService);
   public readonly environmentInjector = inject(EnvironmentInjector);
 
   // Signals for reactive state
-  readonly isDarkMode = signal(false);
+  readonly isDarkMode = this.themeService.isDark;
   readonly isNetworkConnected = signal(true);
   readonly isAppReady = signal(false);
 
@@ -94,9 +96,7 @@ export class AppComponent implements OnInit {
     if (value === null || value === undefined) {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
       const systemDarkMode = prefersDark.matches;
-      await Preferences.set({ key: 'darkMode', value: systemDarkMode.toString() });
-      this.isDarkMode.set(systemDarkMode);
-      this.toggleDarkTheme(systemDarkMode);
+      await this.themeService.setDark(systemDarkMode);
 
       runInInjectionContext(this.environmentInjector, () => {
         setUserProperties(this.analytics, { darkMode: systemDarkMode.toString() });
@@ -104,19 +104,12 @@ export class AppComponent implements OnInit {
     } else {
       // User has set a preference - respect it and don't listen to system changes
       const darkMode = value === 'true';
-      this.isDarkMode.set(darkMode);
-      this.toggleDarkTheme(darkMode);
+      await this.themeService.setDark(darkMode);
 
       runInInjectionContext(this.environmentInjector, () => {
         setUserProperties(this.analytics, { darkMode: darkMode.toString() });
       });
     }
-  }
-
-  private async toggleDarkTheme(shouldAdd: boolean) {
-    this.isDarkMode.set(shouldAdd);
-    document.body.classList.toggle('dark', shouldAdd);
-    await Preferences.set({ key: 'darkMode', value: shouldAdd.toString() });
   }
 
   private async showNetworkAlert() {
