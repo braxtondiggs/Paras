@@ -24,8 +24,9 @@ and **no way to ask questions** can finish it in one sitting.
 
 - `<title>`: imperative, conventional-commit style (`fix: …`, `feat: …`, `refactor: …`, `chore: …`), under 72 chars.
   Generate one from the conversation if omitted.
-- `--ai`: also add the `ai-ready` label so the pipeline picks it up on the next run. Only when the issue meets the
-  checklist in Step 3. Without `--ai`, the issue is created for a human (or for labelling later).
+- `--ai`: also add the `ai-ready` label so the pipeline picks it up on its next scheduled run (every 6 h) or the next
+  manual "Run workflow"; labeling does not start a run by itself. Only when the issue meets the checklist in Step 3.
+  Without `--ai`, the issue is created for a human (or for labelling later).
 - `--priority`: maps to the existing `priority: low|medium|high|urgent` labels. Default `low`.
 - `--milestone <name>`: set if it exists (look it up; never create one).
 - `--dry-run`: print the full issue instead of creating it.
@@ -116,7 +117,7 @@ Create with `mcp__forgejo__issue__create` (owner `braxton`, repo `Paras`), then 
 {url}
 Labels: {labels}
 Agent-ready: yes | no — {failing checklist item if no}
-Next: {if ai-ready: "runs on the next agent trigger (label event fires immediately; PR cap permitting)"}
+Next: {if ai-ready: "queued; runs on the next 6-hourly schedule or Actions -> Local agent -> Run workflow (PR cap permitting)"}
       {else: "add `ai-ready` when you want the agent to take it, or /implement-issue {number} to do it here"}
 ```
 
