@@ -13,6 +13,7 @@ This file documents how AI agents (Claude Code, Claude API, GitHub Actions Claud
 Runs on every PR. Allowed tools: `npm run test`, `npm run lint`, `npm run typecheck`.
 
 **Review priorities (in order):**
+
 1. **Data correctness** — Any change touching `functions/src/index.ts` or `FeedService` that could affect schedule data parsing or Firestore reads/writes.
 2. **Notification reliability** — Changes to `fcm.ts`, notification scheduling logic, or Capacitor push plugin usage.
 3. **Auth/security** — Firestore security rules are not in this repo, but flag any client-side code that assumes a logged-in user when `AuthService` may return anonymous or null.
@@ -27,6 +28,7 @@ Runs on every PR. Allowed tools: `npm run test`, `npm run lint`, `npm run typech
 When mentioned in issues or PRs, the agent has read access to the repo.
 
 **Common tasks this agent handles well:**
+
 - Diagnosing why a Firestore query returns stale or missing data
 - Explaining the Cloud Functions scheduled job flow
 - Suggesting fixes for Capacitor plugin version mismatches
@@ -34,34 +36,54 @@ When mentioned in issues or PRs, the agent has read access to the repo.
 - Identifying Angular standalone import errors
 
 **Always clarify before changing:**
+
 - Firestore collection/document structure (changes affect production data)
 - Notification trigger times (users set custom times; defaults are 7:30 AM and 4 PM)
 - `capacitor.config.json` App ID (changing `com.cymbit.paras` breaks store listings)
 - `environment.prod.ts` Firebase config values
 
+## Local Autonomous Agent (Pi)
+
+A scheduled Forgejo Actions job (`.forgejo/workflows/agent.yml` → `scripts/agent.sh`) works issues labeled `ai-ready` using the Pi coding agent and a local model (Qwen3-Coder 30B on the Mac mini). It runs unattended: **nobody is available to answer questions mid-run.**
+
+**How it works:** the script picks up to 2 `ai-ready` issues by `priority/*` label, labels them `ai-in-progress`, runs Pi on a fresh `ai/issue-N-<slug>` branch off `dev`, runs checks, does a self-review pass, then opens a **draft** (`WIP:`) PR. Failures get `ai-failed` and a comment. It stops if 2 `ai/*` PRs are already open. The script handles git, labels and PRs — Pi only edits files and runs commands.
+
+**Rules for Pi:**
+
+- Work only on the issue you were given. Smallest change that fully resolves it; no drive-by refactors.
+- Read the relevant files before editing. Follow "Coding Guidance for Agents" below.
+- Add or update tests for behavior you change (standalone components use Spectator).
+- Checks: `npm run typecheck && npm run lint && npm run test`. Fix failures you caused.
+- **Do not** run `git commit`, `git push`, create branches, or call the Forgejo API.
+- **Do not** add, remove or upgrade dependencies (`package.json` / lockfiles). The script rejects these changes.
+- **Do not** edit: `capacitor.config.json`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules, `.forgejo/`, `scripts/agent.sh`, `AGENTS.md`, `CLAUDE.md`. The script rejects these changes.
+- Anything under "Always clarify before changing" or "Out of Scope for Agents", or an issue too ambiguous to implement safely: make **no** changes and write the reason to the `blocked.txt` path given in your prompt. A human will clarify.
+- MCP servers and slash commands listed below are **not available** to you. If the prompt points you at a `.claude/commands/*.md` playbook, read it as instructions instead.
+- Don't run deploys, `cap sync`, emulators, or anything that touches Firebase or the network beyond `npm`.
+
 ## Custom Slash Commands
 
-| Command | Purpose |
-|---------|---------|
-| `/deploy-functions` | Lint → build → confirm → deploy Cloud Functions safely |
-| `/sync-native` | Production build → `cap sync` → prep for Xcode/Android Studio |
-| `/check-schedule` | Query Firestore to verify today/tomorrow schedule data is populated |
-| `/bundle-check` | Run webpack-bundle-analyzer and flag anything near the 1.8 MB budget |
-| `/new-component` | Scaffold a standalone Angular component with Spectator test |
-| `/debug-notifications` | Trace FCM token flow and notification scheduling end-to-end |
+| Command                | Purpose                                                              |
+| ---------------------- | -------------------------------------------------------------------- |
+| `/deploy-functions`    | Lint → build → confirm → deploy Cloud Functions safely               |
+| `/sync-native`         | Production build → `cap sync` → prep for Xcode/Android Studio        |
+| `/check-schedule`      | Query Firestore to verify today/tomorrow schedule data is populated  |
+| `/bundle-check`        | Run webpack-bundle-analyzer and flag anything near the 1.8 MB budget |
+| `/new-component`       | Scaffold a standalone Angular component with Spectator test          |
+| `/debug-notifications` | Trace FCM token flow and notification scheduling end-to-end          |
 
 ## MCP Servers Available
 
 See `.mcp.json` for the full list. Key capabilities:
 
-| Server | Use for |
-|--------|---------|
-| `firebase` | Query Firestore collections, manage emulators, inspect Auth users |
-| `forgejo` | Read/comment on PRs and issues, check CI run status |
-| `context7` | Look up current Angular, Ionic, Capacitor, and Firebase SDK docs |
-| `nx` | Nx workspace graph, affected project analysis, task execution |
-| `playwright` | Automated browser testing of the web version of the app |
-| `claude-in-chrome` | Interactive browser testing of the web version |
+| Server             | Use for                                                           |
+| ------------------ | ----------------------------------------------------------------- |
+| `firebase`         | Query Firestore collections, manage emulators, inspect Auth users |
+| `forgejo`          | Read/comment on PRs and issues, check CI run status               |
+| `context7`         | Look up current Angular, Ionic, Capacitor, and Firebase SDK docs  |
+| `nx`               | Nx workspace graph, affected project analysis, task execution     |
+| `playwright`       | Automated browser testing of the web version of the app           |
+| `claude-in-chrome` | Interactive browser testing of the web version                    |
 
 ## Coding Guidance for Agents
 

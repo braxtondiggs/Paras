@@ -1,0 +1,79 @@
+name: Local agent
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours (server time, usually UTC)
+  workflow_dispatch: # "Run workflow" button
+  issues:
+    types: [labeled] # start right away when ai-ready is added
+
+concurrency:
+  group: local-agent # one agent job at a time
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    # Pause switch: set repo variable AGENT_PAUSED=1 (Settings -> Actions -> Variables) to ice the agent.
+    if: vars.AGENT_PAUSED != '1' && (github.event_name != 'issues' || github.event.label.name == 'ai-ready')
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-bookworm
+    timeout-minutes: 90
+    env:
+      AGENT_MODEL: claude-opus-5-5 # implement + fix passes
+      AGENT_EFFORT: high # effort for the implement/fix passes (low|medium|high|xhigh|max)
+      REVIEW_MODEL: claude-sonnet-5-5 # self-review pass
+      AGENT_TIME_LIMIT: 20m # per agent pass
+      BASE_BRANCH: dev
+      MAX_ISSUES: '2' # issues per run
+      PR_CAP: '2' # stop if this many ai/* PRs are open
+      REVIEW_PASS: '1' # second pass that reviews its own diff
+      # ng build is the only step that type-checks Angular templates (tsc and Jest don't); www/ is gitignored
+      CHECK_CMD: npm run typecheck && npm run lint:check && npm test && npx ng build --configuration development
+      FUNCTIONS_CHECK_CMD: npx tsc --noEmit && npm run lint # run inside functions/ only when the diff touches it
+      CI: 'true'
+      NX_DAEMON: 'false'
+      DISABLE_AUTOUPDATER: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.AGENT_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: false # the script attaches the token per git command; nothing on disk for the agent to read
+
+      - name: Install tools
+        run: |
+          apt-get update -qq && apt-get install -y -qq jq >/dev/null
+          # If your unit tests run in a real browser (Karma), uncomment:
+          # apt-get install -y -qq chromium >/dev/null && echo "CHROME_BIN=/usr/bin/chromium" >> "$GITHUB_ENV"
+          npm install -g @anthropic-ai/claude-code >/dev/null
+          claude --version
+
+      - name: Work ai-ready issues
+        env:
+          TOKEN: ${{ secrets.AGENT_TOKEN }}
+          API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
+          # Auth: a Claude subscription token from `claude setup-token` (preferred), or an API key.
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }} # ntfy topic URL (default) or, with NOTIFY_FORMAT=json, a HA/Discord/Slack webhook
+          NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }} # unset = ntfy
+        # Run a copy: the script checks out $BASE_BRANCH mid-run, which would swap the file under bash.
+        run: cp scripts/agent.sh /tmp/agent.sh && bash /tmp/agent.sh
+
+      - name: Alert if the job died before the script could
+        if: failure()
+        env:
+          NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
+          NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+        run: |
+          [ -n "$NOTIFY_WEBHOOK" ] || exit 0
+          [ -s /tmp/agent-notify.log ] && exit 0   # the script already sent a specific alert
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          msg="Local agent job failed before reporting a reason (install/network/crash). $url"
+          if [ "${NOTIFY_FORMAT:-ntfy}" = ntfy ]; then
+            curl -sS -o /dev/null -H "Title: Paras agent: job failed" -H "Priority: high" -H "Click: $url" -d "$msg" "$NOTIFY_WEBHOOK"
+          else
+            curl -sS -o /dev/null -H "Content-Type: application/json" -d "$(jq -n --arg m "$msg" --arg u "$url" \
+              '{title:"Paras agent: job failed", message:$m, text:$m, content:$m, url:$u, priority:"high"}')" "$NOTIFY_WEBHOOK"
+          fi
