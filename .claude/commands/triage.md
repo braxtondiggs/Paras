@@ -38,7 +38,7 @@ Judge against the agent-readiness checklist (same one `/create-issue` uses):
 | Names concrete files, or they are obvious from the title | required for agent-ready |
 | One behavior; expected diff under ~150 lines, 1–3 files | required |
 | Intended behavior stated (not just the mechanical edit) | strong plus |
-| No dependency changes, no `ios/` / `android/`, no Firestore structure, no notification defaults, no store or signing work, no design decision | required (these are protected or out of scope; the pipeline rejects them) |
+| No `ios/` / `android/`, no `.forgejo/`, no Firestore structure, no notification defaults, no store or signing work, no design decision | required (protected or out of scope; the pipeline rejects them). Dependency changes are fine: the draft PR flags them for review |
 | `priority: urgent` > `high` > `medium` > `low` | ordering |
 | Labeled `bug` or `security` | plus |
 | In the "fixes" bucket of the current release (small, user-visible, no platform churn) rather than the platform-upgrade or feature buckets | plus |
@@ -62,8 +62,8 @@ Print a short table of the top `--count` candidates:
   scope). Say in one line what's missing. Offer to rewrite the body (in the `/create-issue` format: Summary,
   Files, Change, Done when, Out of scope) before labeling; rewrite only after the user agrees, via
   `mcp__forgejo__issue__edit`, and keep the original text under a `<details>` block at the bottom.
-- **human**: worth doing but not for the agent (platform upgrades, native, Firebase config, deploys, dependency
-  changes, anything under `.forgejo/`, design calls). Mention at most two of these in one line so they aren't
+- **human**: worth doing but not for the agent (native platform upgrades, Firebase config, deploys, anything under
+  `.forgejo/`, design calls). Mention at most two of these in one line so they aren't
   forgotten; don't count them toward `--count`. Offer to apply the `human-only` label to them (via
   `mcp__forgejo__issue__add_labels`) so they stop showing up as candidates; apply only after the user agrees.
 

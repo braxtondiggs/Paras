@@ -59,7 +59,7 @@ A scheduled Forgejo Actions job (`.forgejo/workflows/agent.yml` → `scripts/age
   (eslint `--fix`) and `npx prettier --write <files you changed>` to auto-fix formatting before the checks. Do not run
   `npm run build` (it runs `cap sync`) or `npm run format` (it rewrites the whole repo).
 - **Do not** run `git commit`, `git push`, create branches, or call the Forgejo API.
-- **Do not** add, remove or upgrade dependencies (`package.json` / lockfiles). The script rejects these changes.
+- Dependency changes are allowed when the issue asks for them: use `npm install` / `npm uninstall` so the lockfile stays consistent, and explain them in the PR summary (the PR body flags changed dependency files for review).
 - **Do not** edit: `capacitor.config.json`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules, `.forgejo/`, `scripts/agent.sh`, `AGENTS.md`, `CLAUDE.md`. The script rejects these changes.
 - Anything under "Always clarify before changing" or "Out of Scope for Agents", or an issue too ambiguous to implement safely: make **no** changes and write the reason to the `blocked.txt` path given in your prompt. A human will clarify.
 - MCP servers and slash commands listed below are **not available** in the unattended job.
