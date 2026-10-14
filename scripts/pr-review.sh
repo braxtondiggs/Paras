@@ -20,12 +20,14 @@ RUN_URL="${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN
 notify() {  # same contract as agent.sh: ntfy gets text + headers, anything else gets JSON
   echo "$1 — $2" >>/tmp/agent-notify.log
   [ -n "${NOTIFY_WEBHOOK:-}" ] || return 0
+  local auth=(); [ -n "${NOTIFY_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $NOTIFY_TOKEN")
   if [ "${NOTIFY_FORMAT:-ntfy}" = ntfy ]; then
-    curl -sS -o /dev/null --max-time 15 -H "Title: $1" -H "Priority: ${3:-default}" -H "Click: $RUN_URL" -d "$2" "$NOTIFY_WEBHOOK"
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Title: $1" -H "Priority: ${3:-default}" -H "Click: $RUN_URL" -d "$2" "$NOTIFY_WEBHOOK" || echo 000)
   else
-    curl -sS -o /dev/null --max-time 15 -H "Content-Type: application/json" -d "$(jq -n --arg t "$1" --arg m "$2" --arg u "$RUN_URL" --arg p "${3:-default}" \
-      '{title:$t, message:$m, text:($t+": "+$m), content:($t+": "+$m), url:$u, priority:$p}')" "$NOTIFY_WEBHOOK"
+    code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${auth[@]}" -H "Content-Type: application/json" -d "$(jq -n --arg t "$1" --arg m "$2" --arg u "$RUN_URL" --arg p "${3:-default}" \
+      '{title:$t, message:$m, text:($t+": "+$m), content:($t+": "+$m), url:$u, priority:$p}')" "$NOTIFY_WEBHOOK" || echo 000)
   fi
+  case "$code" in 2*) ;; *) echo "[notify] FAILED HTTP $code posting to NOTIFY_WEBHOOK (check URL/auth)";; esac
 }
 ping=$(timeout 3m claude -p --output-format text --model claude-haiku-5-5 --max-turns 1 "Reply with exactly: ok" </dev/null 2>&1)
 if ! echo "$ping" | grep -qiw 'ok'; then
