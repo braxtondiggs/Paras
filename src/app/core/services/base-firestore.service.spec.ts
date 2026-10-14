@@ -1,4 +1,4 @@
-import { EnvironmentInjector, Injectable } from '@angular/core';
+import { assertInInjectionContext, EnvironmentInjector, Injectable } from '@angular/core';
 import { createServiceFactory, SpectatorService } from '@ngneat/spectator/jest';
 import { lastValueFrom, of } from 'rxjs';
 
@@ -147,6 +147,18 @@ describe('BaseFirestoreService', () => {
     expect(docMock).toHaveBeenCalledWith(firestoreStub, 'feed', 'doc-123');
     expect(docDataMock.mock.calls[0]).toEqual([getOrCreateDocRef('doc-123'), { idField: 'id' }]);
     expect(traceUntilFirstMock).toHaveBeenCalledWith('get_by_id_feed');
+  });
+
+  it('reads a single document inside an injection context', async () => {
+    const document: TestDoc = { id: 'doc-456', name: 'In context' };
+    (docDataMock as jest.Mock).mockImplementationOnce(() => {
+      assertInInjectionContext(docDataMock);
+      return of(document);
+    });
+
+    const result = await lastValueFrom(spectator.service.getById('doc-456'));
+
+    expect(result).toEqual(document);
   });
 
   it('creates a document and returns generated id', async () => {

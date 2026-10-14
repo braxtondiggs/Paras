@@ -51,12 +51,13 @@ export abstract class BaseFirestoreService<T extends FirestoreDocument> {
 
   getById(id: string): Observable<T | undefined> {
     const docRef = this.getDocRef(id);
-
-    return docData(docRef, { idField: 'id' }).pipe(
-      traceUntilFirst(`get_by_id_${this.collectionName}`),
-      catchError(this.handleError.bind(this)),
-      shareReplay({ bufferSize: 1, refCount: true })
-    );
+    return runInInjectionContext(this.environmentInjector, () => {
+      return docData(docRef, { idField: 'id' }).pipe(
+        traceUntilFirst(`get_by_id_${this.collectionName}`),
+        catchError(this.handleError.bind(this)),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
+    });
   }
 
   async create(data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<OperationResult<string>> {
