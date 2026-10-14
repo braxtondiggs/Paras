@@ -1,8 +1,8 @@
 {
   "name": "functions",
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc --watch",
+    "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
     "clean": "rimraf lib/",
     "start": "npm run build && firebase emulators:start --only firestore,auth,functions --import=./imports",
     "dev": "concurrently \"npm run build:watch\" \"firebase emulators:start --only firestore,auth,functions --import=./imports\"",

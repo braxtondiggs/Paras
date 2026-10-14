@@ -12,3 +12,6 @@ lib/
 # Firebase service account keys
 service-account-key.json
 *-service-account-key.json
+
+# Functions tests live here (the root .gitignore ignores __tests__/)
+!src/__tests__/

@@ -2,11 +2,59 @@ import { Firestore, Timestamp } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions/v2';
 import axios from 'axios';
 
-import { IASPResponse, Status, ASPError } from '../types';
+import { ASPDay, IASPResponse, Status, ASPError } from '../types';
 import { ASP_API_BASE_URL, API_RATE_LIMIT_DELAY, COLLECTIONS } from '../config/constants';
 import { isValidASPItem, validateAPIKey } from '../utils/validation';
 import { isMetered, extractReason } from '../utils/text';
 import { parseASPDate, formatDateForAPI, generateMonthlyDateRanges } from '../utils/date';
+
+/**
+ * Feed document fields derived from one API day (`created` is stamped at write time)
+ */
+export interface ASPFeedDoc {
+  active: boolean;
+  date: Date;
+  id: string;
+  metered: boolean;
+  reason: string | undefined;
+  text: string;
+  type: 'NYC';
+}
+
+/**
+ * Parsed API day: `feed` is null when the day has no valid ASP item and its feed doc is deleted
+ */
+export interface ParsedASPDay {
+  id: string;
+  feed: ASPFeedDoc | null;
+}
+
+/**
+ * Parse NYC API days into feed documents (pure, no Firestore or network access)
+ */
+export function parseASPRows(days: ASPDay[]): ParsedASPDay[] {
+  return days.map(({ today_id, items }) => {
+    const validItem = items.find(item => isValidASPItem(item));
+
+    if (!validItem) {
+      return { id: today_id, feed: null };
+    }
+
+    const { exceptionName, details, status } = validItem;
+    return {
+      id: today_id,
+      feed: {
+        active: status === Status.Active,
+        date: parseASPDate(today_id),
+        id: today_id,
+        metered: isMetered(details),
+        reason: exceptionName || extractReason(details),
+        text: details,
+        type: 'NYC'
+      }
+    };
+  });
+}
 
 /**
  * Service for managing ASP (Alternate Side Parking) data operations
@@ -42,28 +90,15 @@ export class ASPDataService {
    * Process ASP data and save to Firestore
    */
   private processASPData(data: IASPResponse, batch: FirebaseFirestore.WriteBatch): void {
-    data.days.forEach(({ today_id, items }) => {
-      const feedRef = this.db.doc(`${COLLECTIONS.FEED}/${today_id}`);
-      const validItem = items.find(item => isValidASPItem(item));
+    parseASPRows(data.days).forEach(({ id, feed }) => {
+      const feedRef = this.db.doc(`${COLLECTIONS.FEED}/${id}`);
 
-      if (!validItem) {
+      if (!feed) {
         batch.delete(feedRef);
         return;
       }
 
-      const { exceptionName, details, status } = validItem;
-      const feedData = {
-        active: status === Status.Active,
-        created: Timestamp.now(),
-        date: parseASPDate(today_id),
-        id: today_id,
-        metered: isMetered(details),
-        reason: exceptionName || extractReason(details),
-        text: details,
-        type: 'NYC'
-      };
-
-      batch.set(feedRef, feedData);
+      batch.set(feedRef, { ...feed, created: Timestamp.now() });
     });
   }
 

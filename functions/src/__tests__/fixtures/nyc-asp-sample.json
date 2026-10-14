@@ -1,0 +1,414 @@
+{
+  "days": [
+    {
+      "today_id": "20251024",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251025",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are not in session.",
+          "status": "NOT IN SESSION",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251026",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are not in effect on Sundays.",
+          "status": "NOT IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are not in effect on Sundays.",
+          "status": "NOT IN EFFECT",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are not in session.",
+          "status": "NOT IN SESSION",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251027",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251028",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251029",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251030",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251031",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251101",
+      "items": [
+        {
+          "exceptionName": "All Saints' Day 2025",
+          "details": "Alternate side parking is suspended for All Saints' Day. Meters are in effect.",
+          "status": "SUSPENDED",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are not in session.",
+          "status": "NOT IN SESSION",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251102",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are not in effect on Sundays.",
+          "status": "NOT IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are not in effect on Sundays.",
+          "status": "NOT IN EFFECT",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are not in session.",
+          "status": "NOT IN SESSION",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251103",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251104",
+      "items": [
+        {
+          "exceptionName": "Election Day 2025",
+          "details": "Alternate side parking is suspended for Election Day. Meters are in effect.",
+          "status": "SUSPENDED",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "exceptionName": "Election Day 2025",
+          "details": "Trash, recycling, and compost collections are suspended for Election Day.",
+          "status": "SUSPENDED",
+          "type": "Collections"
+        },
+        {
+          "exceptionName": "Election Day 2025",
+          "details": "Public schools are closed for Election Day.",
+          "status": "CLOSED",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251105",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "exceptionName": "Election Day Delayed 11/5 - 11/6/2025",
+          "details": "Trash, recycling, and compost collections are delayed due to the backlog from the recent holiday.",
+          "status": "DELAYED",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251106",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "exceptionName": "Election Day Delayed 11/5 - 11/6/2025",
+          "details": "Trash, recycling, and compost collections are delayed due to the backlog from the recent holiday.",
+          "status": "DELAYED",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251107",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251108",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are not in session.",
+          "status": "NOT IN SESSION",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251109",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are not in effect on Sundays.",
+          "status": "NOT IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are not in effect on Sundays.",
+          "status": "NOT IN EFFECT",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are not in session.",
+          "status": "NOT IN SESSION",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251110",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "details": "Trash, recycling, and compost collections are on schedule.",
+          "status": "ON SCHEDULE",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251111",
+      "items": [
+        {
+          "exceptionName": "Veterans Day 2025",
+          "details": "Alternate side parking is suspended for Veterans Day. Meters are in effect.",
+          "status": "SUSPENDED",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "exceptionName": "Veterans Day 2025",
+          "details": "Trash, recycling, and compost collections are suspended for Veterans Day.",
+          "status": "SUSPENDED",
+          "type": "Collections"
+        },
+        {
+          "exceptionName": "Veterans Day 2025",
+          "details": "Public schools are closed for Veterans Day.",
+          "status": "CLOSED",
+          "type": "Schools"
+        }
+      ]
+    },
+    {
+      "today_id": "20251112",
+      "items": [
+        {
+          "details": "Alternate side parking and meters are in effect.",
+          "status": "IN EFFECT",
+          "type": "Alternate Side Parking"
+        },
+        {
+          "exceptionName": "Veterans Day Delayed 11/12 - 11/13/2025",
+          "details": "Trash, recycling, and compost collections are delayed due to the backlog from the recent holiday.",
+          "status": "DELAYED",
+          "type": "Collections"
+        },
+        {
+          "details": "Public schools are open.",
+          "status": "OPEN",
+          "type": "Schools"
+        }
+      ]
+    }
+  ]
+}
