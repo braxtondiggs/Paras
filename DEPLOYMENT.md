@@ -1,5 +1,18 @@
 # 🚀 Deployment Guide
 
+## Releases (current flow, Forgejo Actions)
+
+Two buttons, nothing else:
+
+1. **Cut**: Actions → _Cut release_ → Run workflow (`bump`: auto from conventional commits, or patch/minor/major; `dry_run: true` to preview). It refuses if an `ai/*` PR is open or checks are red on `dev`. Otherwise it bumps `package.json` + `CHANGELOG.md`, writes the Android `versionName`/`versionCode`, and opens a **Release x.y.z** PR from `release/x.y.z` into `master`.
+2. **Merge that PR.** The _Release_ workflow then tags `vx.y.z`, publishes the Forgejo release with the changelog, builds the Android bundle (signed when the `ANDROID_KEYSTORE_*` secrets exist, debug APK otherwise) and deploys Cloud Functions **only if `functions/` changed since the previous tag** (needs `FIREBASE_TOKEN`).
+
+`package.json` is the single source of truth for the version; Android follows it. Functions are never deployed on an ordinary push to `master`; use the _Deployment Pipeline_ workflow's manual run for an out-of-band functions deploy. iOS is not part of the automated flow. Scripts: `scripts/release-cut.sh`, `scripts/release-tag.sh`.
+
+---
+
+_The rest of this document describes the original GitHub Actions setup and is partly out of date._
+
 This document outlines the complete deployment setup for the Paras application using GitHub Actions.
 
 ## 📋 Overview

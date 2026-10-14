@@ -1,0 +1,55 @@
+name: Cut release
+
+# Button 1 of 2. Bumps the version and CHANGELOG from conventional commits on dev, syncs the Android version,
+# and opens a "Release x.y.z" PR into master. Merging that PR is the release (see release.yml).
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump'
+        required: true
+        default: 'auto'
+        type: choice
+        options: [auto, patch, minor, major]
+      dry_run:
+        description: 'Only print what would be cut (no branch, no PR)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+concurrency:
+  group: release-cut
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-bookworm
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      NX_DAEMON: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install tools
+        run: apt-get update -qq && apt-get install -y -qq jq >/dev/null
+      - name: Cut
+        env:
+          TOKEN: ${{ secrets.AGENT_TOKEN }}
+          API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
+          BUMP: ${{ inputs.bump }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
+          NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+        # The script lives on master (the branch this workflow runs from), not on the dev checkout.
+        run: |
+          git fetch -q origin master
+          git show origin/master:scripts/release-cut.sh > /tmp/release-cut.sh
+          bash /tmp/release-cut.sh

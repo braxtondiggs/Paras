@@ -17,7 +17,7 @@ TIME_LIMIT="${AGENT_TIME_LIMIT:-25m}"
 MAX_ROUNDS="${MAX_FIX_ROUNDS:-2}"
 CHECK_CMD="${CHECK_CMD:-npm run typecheck && npm run lint:check && npm test}"
 L_HANDED_OFF="ai-handed-off"
-PROTECTED_RE='^(capacitor\.config\.json|.*environment\.prod\.ts|firestore\.rules|\.firebaserc|ios/|android/|\.forgejo/|scripts/(agent|pr-review|pr-fix)\.sh|AGENTS\.md|CLAUDE\.md)'
+PROTECTED_RE='^(capacitor\.config\.json|.*environment\.prod\.ts|firestore\.rules|\.firebaserc|ios/|android/|\.forgejo/|scripts/(agent|pr-review|pr-fix|release-cut|release-tag)\.sh|AGENTS\.md|CLAUDE\.md)'
 AGENT_TOOLS='Bash(npm run typecheck*),Bash(npm run lint*),Bash(npm run test*),Bash(npm test*),Bash(npx tsc*),Bash(npx eslint*),Bash(npx prettier*),Bash(npx jest*),Bash(npx ng build*),Bash(git diff*),Bash(git status*),Bash(git log*),Bash(git show*),Bash(git ls-files*),Bash(ls*),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(rg *),Bash(find *),Bash(wc *),Bash(sed -n *),Bash(mkdir *)'
 
 api() { curl -sS -H "Authorization: token $TOKEN_VAL" -H "Content-Type: application/json" "$@"; }

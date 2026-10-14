@@ -1,0 +1,117 @@
+name: Release
+
+# Button 2 of 2 is "merge the release PR". On every push to master this checks whether package.json's version
+# is untagged; if so it tags v<version>, publishes the Forgejo release, builds the Android bundle, and deploys
+# Cloud Functions only when functions/ changed since the previous tag. Pushes that are not a release cut
+# (pipeline tweaks etc.) exit after the first job with nothing to do.
+
+on:
+  push:
+    branches: [master]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    container:
+      image: node:22-bookworm
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      is_release: ${{ steps.tag.outputs.is_release }}
+      functions_changed: ${{ steps.tag.outputs.functions_changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: apt-get update -qq && apt-get install -y -qq jq >/dev/null
+      - id: tag
+        env:
+          TOKEN: ${{ secrets.AGENT_TOKEN }}
+          API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
+          NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
+          NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+        run: bash scripts/release-tag.sh
+
+  android:
+    needs: tag
+    if: needs.tag.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      NX_DAEMON: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: npm ci --no-audit --no-fund
+      - name: Build web + sync Android
+        run: npx ng build --configuration production && npx cap sync android
+      - name: Build Android bundle
+        # Signed release bundle when the keystore secrets exist; otherwise a debug APK so the release still has an artifact.
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x android/gradlew
+          cd android
+          if [ -n "$ANDROID_KEYSTORE_FILE" ]; then
+            ./gradlew bundleRelease
+            ls -la app/build/outputs/bundle/release/
+          else
+            echo "::warning::ANDROID_KEYSTORE_* secrets not set; building a debug APK instead of a signed bundle"
+            ./gradlew assembleDebug
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ needs.tag.outputs.version }}
+          path: |
+            android/app/build/outputs/bundle/release/*.aab
+            android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: warn
+      # TODO(store): upload the .aab to the Play internal track (fastlane supply) once a Play service-account JSON secret exists.
+
+  functions:
+    needs: tag
+    if: needs.tag.outputs.is_release == 'true' && needs.tag.outputs.functions_changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20' # functions/package.json engines
+      - name: Build functions
+        run: cd functions && npm ci --no-audit --no-fund && npm run build
+      - name: Deploy functions
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
+          NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+          VERSION: ${{ needs.tag.outputs.version }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::error::FIREBASE_TOKEN secret not set; functions changed in $VERSION but were NOT deployed"
+            [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: functions NOT deployed" -H "Priority: high" -d "FIREBASE_TOKEN secret missing. Deploy by hand: cd functions && npm run deploy" "$NOTIFY_WEBHOOK"
+            exit 1
+          fi
+          cd functions && npx firebase-tools deploy --only functions --non-interactive
+          [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: functions deployed" -H "Priority: default" -d "Verify tomorrow's schedule with /check-schedule." "$NOTIFY_WEBHOOK" || true
