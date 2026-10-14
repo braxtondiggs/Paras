@@ -4,8 +4,7 @@ on:
   schedule:
     - cron: '0 */6 * * *' # every 6 hours (server time, usually UTC)
   workflow_dispatch: # "Run workflow" button
-  issues:
-    types: [labeled] # start right away when ai-ready is added
+  # No issue-label trigger on purpose: labeling ai-ready only queues; the schedule or the button starts work.
 
 concurrency:
   group: local-agent # one agent job at a time
@@ -14,7 +13,7 @@ concurrency:
 jobs:
   agent:
     # Pause switch: set repo variable AGENT_PAUSED=1 (Settings -> Actions -> Variables) to ice the agent.
-    if: vars.AGENT_PAUSED != '1' && (github.event_name != 'issues' || github.event.label.name == 'ai-ready')
+    if: vars.AGENT_PAUSED != '1'
     runs-on: ubuntu-latest
     container:
       image: node:22-bookworm

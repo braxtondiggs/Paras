@@ -68,16 +68,17 @@ Then **ask** which to label (numbers, "all", or "none"). Do not label anything b
 
 ## Step 4: Label
 
-For each chosen issue: `mcp__forgejo__issue__add_labels` with `["ai-ready"]`. Labeling fires the agent
-immediately (the workflow triggers on the label event), subject to the PR cap. Skip this entirely under
-`--dry-run`.
+For each chosen issue: `mcp__forgejo__issue__add_labels` with `["ai-ready"]`. Labeling only queues the issue:
+the agent picks queued issues up on its 6-hourly schedule or when the user presses Run workflow on "Local agent"
+(there is deliberately no label trigger). Skip this entirely under `--dry-run`.
 
 Report:
 
 ```
 Labeled ai-ready: #a, #b
 Queue now: <n> ai-ready, <m> open ai/ PRs, <k> free slot(s)
-Expect: first draft PR in ~5 min (ntfy "draft PR for #a"); the rest wait for a free slot.
+Starts: next scheduled run at <next 00/06/12/18 UTC>, or now via Actions -> Local agent -> Run workflow.
+Expect: ~5 min per issue once a run starts (ntfy "draft PR for #a"); the rest wait for a free slot.
 ```
 
 ## Notes

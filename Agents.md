@@ -46,7 +46,7 @@ When mentioned in issues or PRs, the agent has read access to the repo.
 
 A scheduled Forgejo Actions job (`.forgejo/workflows/agent.yml` → `scripts/agent.sh`) works issues labeled `ai-ready` using the Pi coding agent and a local model (Qwen3-Coder 30B on the Mac mini). It runs unattended: **nobody is available to answer questions mid-run.**
 
-**How it works:** the script picks up to 2 `ai-ready` issues by `priority/*` label, labels them `ai-in-progress`, runs Pi on a fresh `ai/issue-N-<slug>` branch off `dev`, runs checks, does a self-review pass, then opens a **draft** (`WIP:`) PR. Failures get `ai-failed` and a comment. It stops if 2 `ai/*` PRs are already open. The script handles git, labels and PRs — Pi only edits files and runs commands.
+**How it works:** on its 6-hourly schedule or a manual Run workflow (labeling alone does not start a run), the script picks up to 2 `ai-ready` issues by `priority/*` label, labels them `ai-in-progress`, runs Pi on a fresh `ai/issue-N-<slug>` branch off `dev`, runs checks, does a self-review pass, then opens a **draft** (`WIP:`) PR. Failures get `ai-failed` and a comment. It stops if 2 `ai/*` PRs are already open. The script handles git, labels and PRs — Pi only edits files and runs commands.
 
 **Rules for Pi:**
 
