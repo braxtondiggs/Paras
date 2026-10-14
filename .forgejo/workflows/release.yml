@@ -99,7 +99,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '20' # functions/package.json engines
+          node-version: '22' # functions/package.json engines
       - name: Build functions
         run: cd functions && npm ci --no-audit --no-fund && npm run build
       - name: Deploy functions

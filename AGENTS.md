@@ -97,7 +97,7 @@ See `.mcp.json` for the full list. Key capabilities:
 - Firestore queries go in `FeedService` — don't add Firestore calls to components directly.
 - Capacitor calls must be guarded with `Capacitor.isNativePlatform()` or platform checks where the API doesn't exist in a browser.
 - When adding a new Capacitor plugin, remind the user to run `npx cap sync` and update both `ios/` and `android/` native projects.
-- Cloud Functions deploy to Node.js 18 — do not use Node 20+ APIs.
+- Cloud Functions run on Node.js 22 — keep `functions/package.json` `engines` and the CI functions jobs in sync.
 
 ## Out of Scope for Agents
 
