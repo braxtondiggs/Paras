@@ -29,6 +29,7 @@ export default {
   
   // Test environment
   testEnvironment: 'jsdom',
+  resolver: '<rootDir>/jest.resolver.js',
   
   // File extensions to consider
   moduleFileExtensions: ['ts', 'html', 'js', 'json', 'mjs'],
