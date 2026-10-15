@@ -21,11 +21,12 @@ import { arrowBack, arrowForward } from 'ionicons/icons';
 
 import dayjs, { Dayjs } from 'dayjs';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
-import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 
 import { FeedService, LoggerService, type Feed } from '@core/services';
 import { Calendar } from '@shared/interfaces';
 import { CardDetailComponent } from '../card-detail/card-detail.component';
+import * as calendarUtils from './calendar.utils';
+import { CALENDAR_CONFIG, type CalendarErrorHandler } from './calendar.utils';
 
 // Swiper instance interface
 interface SwiperInstance {
@@ -35,20 +36,6 @@ interface SwiperInstance {
   slidePrev(): void;
   update(): void;
 }
-// Constants for better maintainability
-const CALENDAR_CONFIG = {
-  INITIAL_SLIDE: 6,
-  SLIDES_PER_VIEW: 7,
-  SPACE_BETWEEN: 4,
-  PRELOAD_DAYS_BEFORE: 6,
-  PRELOAD_DAYS_AFTER: 6,
-  LOAD_MORE_THRESHOLD: 3,
-  ADD_DAYS_ON_SCROLL: 10,
-  MAX_DATE_ITERATIONS: 365,
-  SLIDE_ANIMATION_DURATION: 250,
-  DEBOUNCE_DELAY: 16, // ~1 frame at 60fps
-  DATA_LOAD_DELAY: 250
-} as const;
 
 @Component({
   standalone: true,
@@ -68,6 +55,8 @@ export class HorizontalCalendarComponent implements OnInit {
   private readonly logger = inject(LoggerService);
   private readonly loadingController = inject(LoadingController);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly logError: CalendarErrorHandler = (message, error) => this.logger.error(message, error);
+  private readonly createCalendarItem = calendarUtils.createCalendarItem;
 
   // Reactive state signals
   readonly isLoading = signal<boolean>(true);
@@ -85,23 +74,19 @@ export class HorizontalCalendarComponent implements OnInit {
   private isUpdatingSwiper = false;
 
   // Computed properties for derived state
-  readonly dateRange = computed(() => {
-    const items = this.items();
-    if (items.length === 0) return null;
-
-    const start = items[0];
-    const end = items[items.length - 1];
-    return start && end
-      ? {
-          start: dayjs(start.date),
-          end: dayjs(end.date)
-        }
-      : null;
-  });
+  readonly dateRange = computed(() => calendarUtils.getDateRange(this.items()));
 
   readonly hasError = computed(() => !!this.error());
   readonly hasFeeds = computed(() => this.feeds().length > 0);
   readonly canNavigate = computed(() => !this.isLoading() && !this.isSliding());
+
+  // Day cell helpers used by the template; the date/feed logic lives in calendar.utils.ts
+  public readonly hasNotice = (calendar: Calendar, feeds: Feed[] | undefined): boolean =>
+    calendarUtils.hasNotice(calendar, feeds, this.logError);
+  public readonly dayLabel = (calendar: Calendar): string =>
+    calendarUtils.dayLabel(calendar, this.hasNotice(calendar, this.feeds()));
+  public readonly isSelected = (calendar: Calendar): boolean => calendarUtils.isSelected(calendar, this.active());
+  public readonly isToday = (calendar: Calendar): boolean => calendarUtils.isToday(calendar, this.logError);
 
   // Loading state management
   private loadingElement?: HTMLIonLoadingElement;
@@ -110,8 +95,7 @@ export class HorizontalCalendarComponent implements OnInit {
     // Register icons for better performance
     addIcons({ arrowBack, arrowForward });
 
-    // Extend dayjs with plugins once
-    dayjs.extend(isSameOrBefore);
+    // Extend dayjs with plugins once (calendar.utils registers isSameOrBefore)
     dayjs.extend(advancedFormat);
 
     // Set up reactive effect for data loading
@@ -161,22 +145,12 @@ export class HorizontalCalendarComponent implements OnInit {
     await this.loadingElement.present();
 
     // Initialize calendar dates
-    const initialDates = this.generateInitialDates();
+    const initialDates = this.getDatesBetween();
     this.items.set(initialDates);
     this.active.set(initialDates[CALENDAR_CONFIG.INITIAL_SLIDE]);
 
     // Load initial data
     await this.loadData();
-  }
-
-  /**
-   * Generate initial date range for the calendar
-   */
-  private generateInitialDates(): Calendar[] {
-    return this.getDatesBetween(
-      dayjs().subtract(CALENDAR_CONFIG.PRELOAD_DAYS_BEFORE, 'days'),
-      dayjs().add(CALENDAR_CONFIG.PRELOAD_DAYS_AFTER, 'days')
-    );
   }
 
   /**
@@ -310,67 +284,6 @@ export class HorizontalCalendarComponent implements OnInit {
   }
 
   /**
-   * Check if a calendar date has a notice/alert
-   */
-  public hasNotice(calendar: Calendar, feeds: Feed[] | undefined): boolean {
-    if (!feeds || !calendar?.date) return false;
-
-    try {
-      const item = this.getSelectedItem(calendar, feeds);
-      return item ? !item.active : false;
-    } catch (error) {
-      this.logger.error('Failed to check notice status:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Accessible label for a day cell, including the parking suspension when there is one
-   */
-  public dayLabel(calendar: Calendar): string {
-    const notice = this.hasNotice(calendar, this.feeds()) ? ', parking suspended' : '';
-    return `Select ${calendar.day.long} ${calendar.day.num}${notice}`;
-  }
-
-  /**
-   * Check if a calendar date is the currently active (selected) day
-   */
-  public isSelected(calendar: Calendar): boolean {
-    return this.active()?.text === calendar.text;
-  }
-
-  /**
-   * Check if a calendar date is today
-   */
-  public isToday(calendar: Calendar): boolean {
-    if (!calendar?.date) return false;
-
-    try {
-      return dayjs(calendar.date).isSame(dayjs(), 'day');
-    } catch (error) {
-      this.logger.error('Failed to check if date is today:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get the feed item for a specific calendar date
-   */
-  private getSelectedItem(calendar: Calendar, feeds: Feed[]): Feed | undefined {
-    if (!calendar?.date || !Array.isArray(feeds)) return undefined;
-
-    try {
-      return feeds.find(item => {
-        if (!item?.date) return false;
-        return dayjs(item.date.toDate()).isSame(calendar.date, 'day');
-      });
-    } catch (error) {
-      this.logger.error('Failed to get selected item:', error);
-      return undefined;
-    }
-  }
-
-  /**
    * Add more dates to the end when scrolling right
    */
   private async slideEnd(): Promise<void> {
@@ -447,29 +360,9 @@ export class HorizontalCalendarComponent implements OnInit {
     }, CALENDAR_CONFIG.DEBOUNCE_DELAY);
   }
 
-  /**
-   * Generate calendar dates between start and end dates
-   */
+  /** Generate calendar dates between start and end dates (default: the initial preload range) */
   private getDatesBetween(startDate?: Dayjs, endDate?: Dayjs): Calendar[] {
-    try {
-      let start = startDate ?? dayjs().subtract(CALENDAR_CONFIG.PRELOAD_DAYS_BEFORE, 'days');
-      const end = endDate ?? dayjs().add(CALENDAR_CONFIG.PRELOAD_DAYS_AFTER, 'days');
-      const dates: Calendar[] = [];
-
-      // Safety check to prevent infinite loops
-      let iterations = 0;
-
-      while (start.isSameOrBefore(end) && iterations < CALENDAR_CONFIG.MAX_DATE_ITERATIONS) {
-        dates.push(this.createCalendarItem(start));
-        start = start.add(1, 'day');
-        iterations++;
-      }
-
-      return dates;
-    } catch (error) {
-      this.logger.error('Failed to generate date range:', error);
-      return [];
-    }
+    return calendarUtils.getDatesBetween(startDate, endDate, this.logError, date => this.createCalendarItem(date));
   }
 
   /**
@@ -521,7 +414,7 @@ export class HorizontalCalendarComponent implements OnInit {
    * Process the loaded feed data
    */
   private processLoadedData(active: Calendar, feeds: Feed[]): void {
-    const selectedItem = this.getSelectedItem(active, feeds);
+    const selectedItem = calendarUtils.getSelectedItem(active, feeds, this.logError);
     const newSelected = selectedItem ?? dayjs(active.date);
 
     this.selected.set(newSelected);
@@ -577,28 +470,5 @@ export class HorizontalCalendarComponent implements OnInit {
         }
       }
     }, 100);
-  }
-
-  /**
-   * Create a calendar item from a dayjs date
-   */
-  private createCalendarItem(date: Dayjs): Calendar {
-    if (!date?.isValid?.()) {
-      throw new Error('Invalid date provided to createCalendarItem');
-    }
-
-    return {
-      text: date.format(),
-      date: date.toDate(),
-      month: {
-        short: date.format('MMM'),
-        long: date.format('MMMM')
-      },
-      day: {
-        short: date.format('ddd'),
-        long: date.format('dddd'),
-        num: date.format('DD')
-      }
-    };
   }
 }
