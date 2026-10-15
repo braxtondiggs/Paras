@@ -13,7 +13,7 @@ import { Preferences } from '@capacitor/preferences';
 import { PushNotifications, Token } from '@capacitor/push-notifications';
 import { AlertController, IonApp, IonRouterOutlet, Platform } from '@ionic/angular/standalone';
 import { ThemeService } from '@core/services';
-import { register } from 'swiper/element/bundle';
+import { register } from 'swiper/element';
 
 register();
 

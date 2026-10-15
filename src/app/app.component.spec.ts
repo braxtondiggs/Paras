@@ -40,7 +40,7 @@ jest.mock('@angular/fire/analytics', () => ({
 }));
 
 // Mock Swiper registration
-jest.mock('swiper/element/bundle', () => ({
+jest.mock('swiper/element', () => ({
   register: jest.fn()
 }));
 
@@ -197,6 +197,14 @@ describe('AppComponent', () => {
 
     it('should have environmentInjector defined', () => {
       expect(component.environmentInjector).toBeDefined();
+    });
+
+    it('should register the Swiper core elements once at module load', async () => {
+      await jest.isolateModulesAsync(async () => {
+        await import('./app.component');
+        const { register } = await import('swiper/element');
+        expect(register).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
