@@ -1,9 +1,7 @@
 {
 	"appId": "com.cymbit.paras",
 	"appName": "ASP NYC",
-	"npmClient": "npm",
 	"webDir": "www",
-	"bundledWebRuntime": false,
 	"includePlugins": [
 		"@capacitor/app",
 		"@capacitor/haptics",

@@ -56,7 +56,12 @@ ion-content {
 }
 
 .feature-card {
-  background: rgba(255, 255, 255, 0.95);
+  // The card keeps a light surface in both themes, so its text colours are
+  // tied to this surface rather than to the global (theme-switching) palette.
+  --feature-card-bg: rgba(255, 255, 255, 0.95);
+  --feature-card-title: #1f2937;
+
+  background: var(--feature-card-bg);
   border-radius: 16px;
   padding: 1.5rem;
   display: flex;
@@ -83,7 +88,7 @@ ion-content {
       margin: 0 0 0.5rem 0;
       font-size: 1.1rem;
       font-weight: 600;
-      color: var(--ion-color-dark);
+      color: var(--feature-card-title);
     }
 
     p {

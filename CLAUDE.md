@@ -23,7 +23,7 @@
 
 ### Mobile Platform
 
-- **Capacitor 7.4.3** for native functionality
+- **Capacitor 8.5.3** for native functionality
 - **iOS and Android** support
 - Push notifications via `@capacitor/push-notifications`
 - Native features: haptics, preferences, network status

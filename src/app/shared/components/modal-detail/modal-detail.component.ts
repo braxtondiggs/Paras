@@ -25,7 +25,7 @@ import { CardDetailComponent } from './../card-detail/card-detail.component';
 })
 export class ModalDetailComponent implements OnInit {
   private readonly analytics = inject(Analytics);
-  private readonly modal = inject(ModalController);
+  private readonly modalCtrl = inject(ModalController);
 
   readonly item = signal<Feed | Dayjs | undefined>(undefined);
 
@@ -54,7 +54,7 @@ export class ModalDetailComponent implements OnInit {
   }
 
   async dismiss() {
-    await this.modal.dismiss();
+    await this.modalCtrl.dismiss();
     const currentItem = this.item();
     const isActive = currentItem && !dayjs.isDayjs(currentItem) ? currentItem.active : true;
 

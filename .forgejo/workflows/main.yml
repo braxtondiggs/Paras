@@ -17,8 +17,8 @@ on:
           - all
 
 env:
-  NODE_VERSION: '20'
-  JAVA_VERSION: '17'
+  NODE_VERSION: '22'
+  JAVA_VERSION: '21'
 
 jobs:
   # Quality Checks

@@ -16,7 +16,7 @@ permissions:
 jobs:
   typecheck:
     container:
-      image: node:20-bookworm # Node preinstalled: no setup-node download per job
+      image: node:22-bookworm # Node preinstalled: no setup-node download per job
     name: Typecheck
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
@@ -32,7 +32,7 @@ jobs:
 
   test:
     container:
-      image: node:20-bookworm # Node preinstalled: no setup-node download per job
+      image: node:22-bookworm # Node preinstalled: no setup-node download per job
     name: Test
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
@@ -48,7 +48,7 @@ jobs:
 
   build:
     container:
-      image: node:20-bookworm # Node preinstalled: no setup-node download per job
+      image: node:22-bookworm # Node preinstalled: no setup-node download per job
     name: Build
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false || github.event_name == 'push'
@@ -97,7 +97,7 @@ jobs:
 
   security:
     container:
-      image: node:20-bookworm # Node preinstalled: no setup-node download per job
+      image: node:22-bookworm # Node preinstalled: no setup-node download per job
     name: Security Audit
     runs-on: ubuntu-latest
 
