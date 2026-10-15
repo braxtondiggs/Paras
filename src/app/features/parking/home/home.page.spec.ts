@@ -112,6 +112,19 @@ describe('HomePage', () => {
     expect(dayjs(spectator.component.maxDate()).isSame(dayjs().endOf('month').subtract(1, 'day'), 'day')).toBe(true);
   });
 
+  it('clears loading state with empty items when feed retrieval fails', () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    feedService.getFeeds.mockReturnValue(throwError(() => new Error('boom')));
+
+    spectator.component['loadFeedData'](dayjs('2024-03-01'), dayjs('2024-03-31'));
+
+    expect(spectator.component.items()).toEqual([]);
+    expect(spectator.component.isLoading()).toBe(false);
+    expect(consoleError).toHaveBeenCalledTimes(1);
+
+    consoleError.mockRestore();
+  });
+
   it('opens modal with feed item when selecting an existing date', async () => {
     const present = jest.fn().mockResolvedValue(undefined);
     modalController.create.mockResolvedValue({ present } as any);

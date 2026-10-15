@@ -32,7 +32,7 @@ import { ModalDetailComponent } from '@shared/components/modal-detail/modal-deta
 import dayjs, { type Dayjs } from 'dayjs';
 import { addIcons } from 'ionicons';
 import { calendarOutline, settingsOutline } from 'ionicons/icons';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of } from 'rxjs';
 import { catchError, take } from 'rxjs/operators';
 
 // Types and interfaces
@@ -224,18 +224,12 @@ export class HomePage implements AfterViewInit {
         takeUntilDestroyed(this.destroyRef),
         catchError(error => {
           console.error('Error fetching feed data:', error);
-          return [];
+          return of([] as Feed[]);
         })
       )
-      .subscribe({
-        next: (items: Feed[]) => {
-          this.items.set(items);
-          this.isLoading.set(false);
-        },
-        error: error => {
-          console.error('Error in feed subscription:', error);
-          this.isLoading.set(false);
-        }
+      .subscribe((items: Feed[]) => {
+        this.items.set(items);
+        this.isLoading.set(false);
       });
   }
 
