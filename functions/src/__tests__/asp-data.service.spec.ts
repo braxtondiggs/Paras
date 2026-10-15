@@ -132,9 +132,7 @@ describe('parseASPRows', () => {
     ]);
   });
 
-  // Known bug: isMetered only matches "meters are/will not be in effect", so this real holiday wording
-  // (Christmas, New Year's Day, Memorial Day, ...) is stored as metered. Switch to it() once fixed.
-  it.failing('stores "Alternate side parking and meters are suspended" days as unmetered', () => {
+  it('stores "Alternate side parking and meters are suspended" days as unmetered', () => {
     const [christmas] = parseASPRows([
       {
         today_id: '20251225',

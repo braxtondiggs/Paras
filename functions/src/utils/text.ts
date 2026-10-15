@@ -18,7 +18,9 @@ export function upperFirst(text: string): string {
 export function isMetered(text: string): boolean {
   const negativeIndicators = [
     'meters are not in effect',
-    'meters will not be in effect'
+    'meters will not be in effect',
+    'meters are suspended',
+    'meters will be suspended'
   ];
 
   const positiveIndicators = [
