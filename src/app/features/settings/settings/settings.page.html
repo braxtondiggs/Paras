@@ -9,7 +9,7 @@
 
 <ion-content [fullscreen]="true">
   @if (!isLoading()) {
-    <form [formGroup]="settingsForm()">
+    <form [formGroup]="settingsForm">
       @if (!isiOS()) {
         <ion-list-header>
           <ion-label>Notification Preferences</ion-label>

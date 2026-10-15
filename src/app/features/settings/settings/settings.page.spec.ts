@@ -52,6 +52,7 @@ describe('SettingsPage', () => {
   let toastController: { create: jest.Mock };
   let loadingController: { create: jest.Mock };
   let platformMock: Platform;
+  let purchaseChain: { approved: jest.Mock; verified: jest.Mock };
 
   const overlayFactory = () => ({
     present: jest.fn(async () => undefined),
@@ -105,6 +106,7 @@ describe('SettingsPage', () => {
         })
       }),
       initialize: jest.fn(),
+      off: jest.fn(),
       get: jest.fn().mockReturnValue({
         getOffer: jest.fn().mockReturnValue({ order: jest.fn() })
       })
@@ -119,6 +121,11 @@ describe('SettingsPage', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    purchaseChain = { approved: jest.fn(), verified: jest.fn() };
+    purchaseChain.approved.mockReturnValue(purchaseChain);
+    purchaseChain.verified.mockReturnValue(purchaseChain);
+    (globalThis as any).CdvPurchase.store.when.mockReturnValue(purchaseChain);
 
     platformMock = {
       is: jest.fn().mockReturnValue(false),
@@ -159,7 +166,7 @@ describe('SettingsPage', () => {
     expect(settingsService.settingsSignal).toHaveBeenCalled();
     expect(spectator.component.isLoading()).toBe(false);
     expect(spectator.component.settings().today).toBe('custom');
-    expect(spectator.component.settingsForm().value.today).toBe('custom');
+    expect(spectator.component.settingsForm.value.today).toBe('custom');
   });
 
   it('saves checkbox changes and logs analytics', async () => {
@@ -191,7 +198,7 @@ describe('SettingsPage', () => {
   it('updates today notification time when valid', async () => {
     settingsService.updateSettings.mockClear();
 
-    spectator.component.settingsForm().patchValue({ today: 'custom' });
+    spectator.component.settingsForm.patchValue({ today: 'custom' });
 
     await spectator.component.onTodayChange('8:45AM');
 
@@ -208,7 +215,7 @@ describe('SettingsPage', () => {
   it('saves next day custom time when valid', async () => {
     settingsService.updateSettings.mockClear();
 
-    spectator.component.settingsForm().patchValue({ nextDay: 'custom' });
+    spectator.component.settingsForm.patchValue({ nextDay: 'custom' });
 
     await spectator.component.onNextDateChange('5:30PM');
 
@@ -231,19 +238,19 @@ describe('SettingsPage', () => {
   });
 
   it('reverts today selection when cancelled', () => {
-    spectator.component.settingsForm().controls['today'].setValue('immediately');
+    spectator.component.settingsForm.controls['today'].setValue('immediately');
 
     spectator.component.onTodayCancel();
 
-    expect(spectator.component.settingsForm().value.today).toBe(spectator.component.settings().today);
+    expect(spectator.component.settingsForm.value.today).toBe(spectator.component.settings().today);
   });
 
   it('reverts next day selection when cancelled', () => {
-    spectator.component.settingsForm().controls['nextDay'].setValue('custom');
+    spectator.component.settingsForm.controls['nextDay'].setValue('custom');
 
     spectator.component.onNextDateCancel();
 
-    expect(spectator.component.settingsForm().value.nextDay).toBe(spectator.component.settings().nextDay);
+    expect(spectator.component.settingsForm.value.nextDay).toBe(spectator.component.settings().nextDay);
   });
 
   it('handles dark mode toggles and logs analytics', async () => {
@@ -349,6 +356,21 @@ describe('SettingsPage', () => {
     expect(store.get).toHaveBeenCalledWith('donation_99', 'google_play');
     expect(getOfferSpy).toHaveBeenCalled();
     expect(orderSpy).toHaveBeenCalled();
+  });
+
+  it('unregisters purchase callbacks on destroy', () => {
+    const store = (globalThis as any).CdvPurchase.store;
+    const onApproved = purchaseChain.approved.mock.calls[0][0];
+    const onVerified = purchaseChain.verified.mock.calls[0][0];
+    expect(onApproved).toEqual(expect.any(Function));
+    expect(onVerified).toEqual(expect.any(Function));
+    expect(store.off).not.toHaveBeenCalled();
+
+    spectator.fixture.destroy();
+
+    expect(store.off).toHaveBeenCalledTimes(2);
+    expect(store.off).toHaveBeenCalledWith(onApproved);
+    expect(store.off).toHaveBeenCalledWith(onVerified);
   });
 
   it('opens time picker and forwards selection to today change handler', async () => {

@@ -101,7 +101,7 @@ export class SettingsPage implements OnInit {
     darkMode: false
   });
 
-  readonly settingsForm = signal<FormGroup>(this.fb.group(this.settings()));
+  readonly settingsForm: FormGroup = this.fb.group(this.settings());
   readonly isLoading = signal(true);
   readonly isiOS = signal(this.platform.is('ios'));
   readonly store = signal<CdvPurchase.Store | undefined>(undefined);
@@ -113,11 +113,11 @@ export class SettingsPage implements OnInit {
 
   // Computed signals for derived state
   readonly todayNotificationMessage = computed(() =>
-    this.getNotificationMessage('today', this.settingsForm().value.today)
+    this.getNotificationMessage('today', this.settingsForm.value.today)
   );
 
   readonly nextDayNotificationMessage = computed(() =>
-    this.getNotificationMessage('nextday', this.settingsForm().value.nextDay)
+    this.getNotificationMessage('nextday', this.settingsForm.value.nextDay)
   );
 
   constructor() {
@@ -132,24 +132,24 @@ export class SettingsPage implements OnInit {
   }
 
   private setupFormListeners(): void {
-    this.settingsForm()
-      .controls['today'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+    this.settingsForm.controls['today'].valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(async today => {
         if (!today) return;
         if (today === 'custom') return this.openTimePicker('today');
         await this.saveSettings({ today });
       });
 
-    this.settingsForm()
-      .controls['nextDay'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+    this.settingsForm.controls['nextDay'].valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(async nextDay => {
         if (!nextDay) return;
         if (nextDay === 'custom') return this.openTimePicker('nextDay');
         await this.saveSettings({ nextDay });
       });
 
-    this.settingsForm()
-      .controls['darkMode'].valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+    this.settingsForm.controls['darkMode'].valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(async value => {
         await this.handleDarkModeChange(value);
       });
@@ -175,17 +175,25 @@ export class SettingsPage implements OnInit {
         platform: this.purchasePlatform
       });
 
-      this.store()
-        ?.when()
-        .approved(receipt => receipt.verify())
-        .verified(async receipt => {
-          receipt.finish();
-          await this.showToast('Your support is always appreciated!', 10000);
-        });
+      this.store()?.when().approved(this.onApproved).verified(this.onVerified);
 
       this.store()?.initialize([this.purchasePlatform]);
     });
+
+    this.destroyRef.onDestroy(() => {
+      this.store()?.off(this.onApproved);
+      this.store()?.off(this.onVerified);
+    });
   }
+
+  private readonly onApproved = (transaction: CdvPurchase.Transaction): void => {
+    transaction.verify();
+  };
+
+  private readonly onVerified = async (receipt: CdvPurchase.VerifiedReceipt): Promise<void> => {
+    receipt.finish();
+    await this.showToast('Your support is always appreciated!', 10000);
+  };
 
   private async loadSettings(): Promise<void> {
     const loading = await this.loading.create();
@@ -205,7 +213,7 @@ export class SettingsPage implements OnInit {
         };
 
         this.settings.set(formData);
-        this.settingsForm().patchValue(formData, { emitEvent: false, onlySelf: true });
+        this.settingsForm.patchValue(formData, { emitEvent: false, onlySelf: true });
       }
     } finally {
       this.isLoading.set(false);
@@ -279,11 +287,11 @@ export class SettingsPage implements OnInit {
 
     const todayCustom = dayjs(date, 'h:mmA').format(this.format);
     this.settings.update(s => ({ ...s, todayCustom }));
-    await this.saveSettings({ today: this.settingsForm().value.today, todayCustom });
+    await this.saveSettings({ today: this.settingsForm.value.today, todayCustom });
   }
 
   onTodayCancel(): void {
-    this.settingsForm().controls['today'].patchValue(this.settings().today);
+    this.settingsForm.controls['today'].patchValue(this.settings().today);
   }
 
   async onNextDateChange(date: string): Promise<void> {
@@ -295,11 +303,11 @@ export class SettingsPage implements OnInit {
 
     const nextDayCustom = dayjs(date, 'h:mmA').format(this.format);
     this.settings.update(s => ({ ...s, nextDayCustom }));
-    await this.saveSettings({ nextDay: this.settingsForm().value.nextDay, nextDayCustom });
+    await this.saveSettings({ nextDay: this.settingsForm.value.nextDay, nextDayCustom });
   }
 
   onNextDateCancel(): void {
-    this.settingsForm().controls['nextDay'].patchValue(this.settings().nextDay);
+    this.settingsForm.controls['nextDay'].patchValue(this.settings().nextDay);
   }
 
   async rate(): Promise<void> {
@@ -380,7 +388,7 @@ export class SettingsPage implements OnInit {
       buttons: [
         {
           text: 'Okay',
-          handler: () => this.settingsForm().controls['nextDay'].patchValue(this.settings().nextDay)
+          handler: () => this.settingsForm.controls['nextDay'].patchValue(this.settings().nextDay)
         }
       ]
     });
