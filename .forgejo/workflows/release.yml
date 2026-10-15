@@ -63,7 +63,9 @@ jobs:
       - name: Build web + sync Android
         run: npx ng build --configuration production && npx cap sync android
       - name: Build Android bundle
-        # Signed release bundle when the keystore secrets exist; otherwise a debug APK so the release still has an artifact.
+        # With the keystore secrets: decode the upload keystore, build a signed bundle and verify the signature
+        # (app/build.gradle reads ANDROID_KEYSTORE_PATH + passwords from the env). Without them: a debug APK so
+        # the release still has an artifact.
         env:
           ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -73,7 +75,18 @@ jobs:
           chmod +x android/gradlew
           cd android
           if [ -n "$ANDROID_KEYSTORE_FILE" ]; then
+            for v in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+              if [ -z "${!v}" ]; then
+                echo "::error::ANDROID_KEYSTORE_FILE is set but $v is empty; set all four ANDROID_* secrets"
+                exit 1
+              fi
+            done
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+            echo "$ANDROID_KEYSTORE_FILE" | base64 -d > "$ANDROID_KEYSTORE_PATH"
+            trap 'rm -f "$ANDROID_KEYSTORE_PATH"' EXIT
             ./gradlew bundleRelease
+            # Fail here rather than upload an unsigned bundle Play would reject.
+            jarsigner -verify -strict app/build/outputs/bundle/release/app-release.aab
             ls -la app/build/outputs/bundle/release/
           else
             echo "::warning::ANDROID_KEYSTORE_* secrets not set; building a debug APK instead of a signed bundle"
@@ -103,17 +116,24 @@ jobs:
       - name: Build functions
         run: cd functions && npm ci --no-audit --no-fund && npm run build
       - name: Deploy functions
+        # Auth: FIREBASE_SERVICE_ACCOUNT (service-account JSON, preferred) or the legacy FIREBASE_TOKEN from `firebase login:ci`.
         env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
           NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
           NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }} # optional: ntfy access token (Bearer); leave unset for user:pass-in-URL or open topics
           VERSION: ${{ needs.tag.outputs.version }}
         run: |
-          if [ -z "$FIREBASE_TOKEN" ]; then
-            echo "::error::FIREBASE_TOKEN secret not set; functions changed in $VERSION but were NOT deployed"
-            [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: functions NOT deployed" -H "Priority: high" -d "FIREBASE_TOKEN secret missing. Deploy by hand: cd functions && npm run deploy" "$NOTIFY_WEBHOOK"
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
+            trap 'rm -f "$GOOGLE_APPLICATION_CREDENTIALS"' EXIT
+            unset FIREBASE_TOKEN
+          elif [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::error::Neither FIREBASE_SERVICE_ACCOUNT nor FIREBASE_TOKEN is set; functions changed in $VERSION but were NOT deployed"
+            [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: functions NOT deployed" -H "Priority: high" -d "FIREBASE_SERVICE_ACCOUNT / FIREBASE_TOKEN secret missing. Deploy by hand: cd functions && npm run deploy" "$NOTIFY_WEBHOOK"
             exit 1
           fi
-          cd functions && npx firebase-tools deploy --only functions --non-interactive
+          cd functions && npx firebase-tools@14 deploy --only functions --non-interactive
           [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: functions deployed" -H "Priority: default" -d "Verify tomorrow's schedule with /check-schedule." "$NOTIFY_WEBHOOK" || true

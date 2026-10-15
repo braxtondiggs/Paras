@@ -89,6 +89,8 @@ $RECYCLE.BIN/
 /plugins
 /www
 /release.keystore
+*.jks
+*.keystore
 /ASP.apk
 /.angular/cache
 
