@@ -1,4 +1,5 @@
 import { EnvironmentInjector } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { createComponentFactory, type Spectator } from '@ngneat/spectator/jest';
 import { beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
 
@@ -371,6 +372,26 @@ describe('SettingsPage', () => {
     expect(store.off).toHaveBeenCalledTimes(2);
     expect(store.off).toHaveBeenCalledWith(onApproved);
     expect(store.off).toHaveBeenCalledWith(onVerified);
+  });
+
+  it('does not register purchase callbacks when destroyed before the platform is ready', async () => {
+    const store = (globalThis as any).CdvPurchase.store;
+    let resolveReady!: () => void;
+    const ready = new Promise<void>(resolve => (resolveReady = resolve));
+    jest.mocked(platformMock.ready).mockReturnValueOnce(ready as any);
+    store.when.mockClear();
+    store.register.mockClear();
+    store.initialize.mockClear();
+
+    const fixture = TestBed.createComponent(SettingsPage);
+    fixture.destroy();
+    resolveReady();
+    await ready;
+
+    expect(fixture.componentInstance.store()).toBeUndefined();
+    expect(store.register).not.toHaveBeenCalled();
+    expect(store.when).not.toHaveBeenCalled();
+    expect(store.initialize).not.toHaveBeenCalled();
   });
 
   it('opens time picker and forwards selection to today change handler', async () => {

@@ -166,7 +166,12 @@ export class SettingsPage implements OnInit {
   }
 
   private initializePurchaseStore(): void {
+    let destroyed = false;
+
     this.platform.ready().then(() => {
+      // The page can be destroyed before the platform is ready; registering then would leak the callbacks.
+      if (destroyed) return;
+
       this.store.set(CdvPurchase.store);
 
       this.store()?.register({
@@ -181,6 +186,7 @@ export class SettingsPage implements OnInit {
     });
 
     this.destroyRef.onDestroy(() => {
+      destroyed = true;
       this.store()?.off(this.onApproved);
       this.store()?.off(this.onVerified);
     });
