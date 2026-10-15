@@ -1,6 +1,6 @@
 # Agents
 
-This file documents how AI agents (Claude Code, Claude API, GitHub Actions Claude) should operate within this project.
+This file documents how AI agents (Claude Code, the Claude API, and the Forgejo Actions agents) should operate within this project.
 
 ## Project Context for Agents
 
@@ -8,7 +8,7 @@ This file documents how AI agents (Claude Code, Claude API, GitHub Actions Claud
 
 **Audience impact:** A notification bug or wrong schedule data could cause users to get parking tickets. Treat data correctness and notification reliability as the highest-priority concerns.
 
-## Automated Review Agent (claude-code-review.yml)
+## Automated Review Agent (pr-review.yml)
 
 Runs on every PR. Allowed tools: `npm run typecheck`, `npm run lint:check`, `npm run test`.
 
@@ -22,25 +22,6 @@ Runs on every PR. Allowed tools: `npm run typecheck`, `npm run lint:check`, `npm
 6. **TypeScript strictness** — No `any` without a comment explaining why.
 
 **What to skip:** Stylistic nitpicks, comment formatting, alphabetical ordering of imports.
-
-## Interactive Agent (@claude mentions)
-
-When mentioned in issues or PRs, the agent has read access to the repo.
-
-**Common tasks this agent handles well:**
-
-- Diagnosing why a Firestore query returns stale or missing data
-- Explaining the Cloud Functions scheduled job flow
-- Suggesting fixes for Capacitor plugin version mismatches
-- Reviewing notification payload structure against FCM API requirements
-- Identifying Angular standalone import errors
-
-**Always clarify before changing:**
-
-- Firestore collection/document structure (changes affect production data)
-- Notification trigger times (users set custom times; defaults are 7:30 AM and 4 PM)
-- `capacitor.config.json` App ID (changing `com.cymbit.paras` breaks store listings)
-- `environment.prod.ts` Firebase config values
 
 ## Local Autonomous Agent (Claude Code, headless)
 
@@ -60,10 +41,17 @@ A scheduled Forgejo Actions job (`.forgejo/workflows/agent.yml` → `scripts/age
   `npm run build` (it runs `cap sync`) or `npm run format` (it rewrites the whole repo).
 - **Do not** run `git commit`, `git push`, create branches, or call the Forgejo API.
 - Dependency changes are allowed when the issue asks for them: use `npm install` / `npm uninstall` so the lockfile stays consistent, and explain them in the PR summary (the PR body flags changed dependency files for review).
-- **Do not** edit: `capacitor.config.json`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules, `.forgejo/`, `scripts/agent.sh`, `AGENTS.md`, `CLAUDE.md`. The script rejects these changes.
+- **Do not** edit: `capacitor.config.ts`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules, `.forgejo/`, `scripts/agent.sh`, `AGENTS.md`, `CLAUDE.md`. The script rejects these changes.
 - Anything under "Always clarify before changing" or "Out of Scope for Agents", or an issue too ambiguous to implement safely: make **no** changes and write the reason to the `blocked.txt` path given in your prompt. A human will clarify.
 - MCP servers and slash commands listed below are **not available** in the unattended job.
 - Don't run deploys, `cap sync`, emulators, or anything that touches Firebase or the network beyond `npm`.
+
+**Always clarify before changing** (make no changes; write the reason to `blocked.txt` and let a human decide):
+
+- Firestore collection/document structure (changes affect production data)
+- Notification trigger times (users set custom times; defaults are 7:30 AM and 4 PM)
+- The App ID in `capacitor.config.ts` (changing `com.cymbit.paras` breaks store listings)
+- `environment.prod.ts` Firebase config values
 
 ## Custom Slash Commands
 

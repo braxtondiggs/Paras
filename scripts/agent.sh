@@ -39,7 +39,7 @@ REVIEW_PASS="${REVIEW_PASS:-1}"        # 1 = second pass reviewing its own diff
 AGENT_TOOLS='Bash(npm install*),Bash(npm i *),Bash(npm uninstall*),Bash(npm ci*),Bash(npm run typecheck*),Bash(npm run lint*),Bash(npm run test*),Bash(npm test*),Bash(npx tsc*),Bash(npx eslint*),Bash(npx prettier*),Bash(npx jest*),Bash(npx ng build*),Bash(git diff*),Bash(git status*),Bash(git log*),Bash(git show*),Bash(git ls-files*),Bash(ls*),Bash(cat *),Bash(head *),Bash(tail *),Bash(grep *),Bash(rg *),Bash(find *),Bash(wc *),Bash(sed -n *),Bash(mkdir *)'
 
 # Files the agent must never change (from AGENTS.md "Always clarify" + "Out of scope").
-PROTECTED_RE='^(capacitor\.config\.json|.*environment\.prod\.ts|firestore\.rules|\.firebaserc|ios/|android/|\.forgejo/|scripts/(agent|pr-review|pr-fix|release-cut|release-tag)\.sh|AGENTS\.md|CLAUDE\.md)'
+PROTECTED_RE='^(capacitor\.config\.(json|ts)|.*environment\.prod\.ts|firestore\.rules|\.firebaserc|ios/|android/|\.forgejo/|scripts/(agent|pr-review|pr-fix|release-cut|release-tag)\.sh|AGENTS\.md|CLAUDE\.md)'
 
 # ---------- helpers ----------
 api()     { curl -sS -H "Authorization: token $TOKEN_VAL" -H "Content-Type: application/json" "$@"; }

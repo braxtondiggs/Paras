@@ -58,7 +58,7 @@ fails:
   not "remove the duplicate handler".) The agent does what the ticket says, including wrong mechanics.
 - "Done when" is checkable by a test or a command.
 - Nothing under AGENTS.md "Always clarify before changing" / "Out of Scope for Agents": Firestore structure,
-  notification default times, `capacitor.config.json`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules,
+  notification default times, `capacitor.config.ts`, `environment.prod.ts`, `ios/`, `android/`, Firestore rules,
   Firebase project ID. Dependency changes are allowed; name the exact package and version in the issue.
 - Nothing that needs a device, a store, a credential, or a design decision.
 

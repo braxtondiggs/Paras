@@ -1,6 +1,6 @@
 name: PR review (Claude)
 
-# Forgejo-native replacement for claude-code-review.yml (anthropics/claude-code-action is GitHub-only).
+# Forgejo-native PR review: runs Claude Code headless on every PR and posts the result as a Forgejo review.
 # Reviews every PR with Claude Code in print mode and posts the findings through the Forgejo API.
 
 on:
