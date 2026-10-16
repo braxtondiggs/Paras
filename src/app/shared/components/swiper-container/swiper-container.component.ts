@@ -36,7 +36,9 @@ import type { SwiperContainer } from 'swiper/element';
       <ng-content />
     </swiper-container>
   `,
-  styles: ':host { display: block; }'
+  // The host takes the place <swiper-container> used to have in its parent's layout (e.g. a flex
+  // item in the calendar), so it must fill the available width for Swiper to size its slides
+  styles: ':host { display: block; flex: 1 1 auto; min-width: 0; width: 100%; }'
 })
 export class SwiperContainerComponent {
   readonly initialSlide = input(0);
