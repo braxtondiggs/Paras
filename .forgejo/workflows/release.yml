@@ -70,6 +70,10 @@ jobs:
           java-version: '21'
       # Fully qualified: the runner resolves bare names against data.forgejo.org, which does not mirror this action.
       - uses: https://github.com/android-actions/setup-android@v3
+        with:
+          # The action's default package list includes the legacy "tools" package, which Google removed from
+          # the SDK repository; sdkmanager exits 1 on it. Gradle fetches build-tools/platforms itself.
+          packages: platform-tools
       - run: npm ci --no-audit --no-fund
       - name: Build web + sync Android
         run: npx ng build --configuration production && npx cap sync android
