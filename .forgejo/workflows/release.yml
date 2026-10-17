@@ -68,7 +68,8 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      # Fully qualified: the runner resolves bare names against data.forgejo.org, which does not mirror this action.
+      - uses: https://github.com/android-actions/setup-android@v3
       - run: npm ci --no-audit --no-fund
       - name: Build web + sync Android
         run: npx ng build --configuration production && npx cap sync android
