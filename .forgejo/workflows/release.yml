@@ -33,7 +33,15 @@ jobs:
           persist-credentials: false
       - id: smoke
         if: github.event_name == 'workflow_dispatch'
+        env:
+          REF: ${{ github.ref_name }}
         run: |
+          # The android job holds the Play upload keystore, so a smoke run from an arbitrary branch would hand it to
+          # whatever that branch's workflow, gradle files or npm scripts do. Trusted refs only.
+          case "$REF" in
+            dev|master|release/*) ;;
+            *) echo "::error::Smoke runs are limited to dev, master and release/* (got '$REF')"; exit 1 ;;
+          esac
           echo "version=smoke" >> "$GITHUB_OUTPUT"
           echo "is_release=true" >> "$GITHUB_OUTPUT"
       - if: github.event_name == 'push'
@@ -86,6 +94,7 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION: ${{ needs.tag.outputs.version }}
         run: |
           chmod +x android/gradlew
           cd android
@@ -103,14 +112,19 @@ jobs:
             ./gradlew bundleRelease
             # Fail here rather than upload an unsigned bundle Play would reject. jarsigner exits 0 for "jar is
             # unsigned", so grep the verdict; no -strict because the upload key is self-signed (chain warning).
+            # Exact match: "jar verified, with signer errors." must not pass.
             jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tee /tmp/jarsigner.txt
-            grep -q '^jar verified' /tmp/jarsigner.txt
+            grep -qx 'jar verified\.' /tmp/jarsigner.txt
             ls -la app/build/outputs/bundle/release/
+          elif [ "$VERSION" = smoke ]; then
+            echo "::error::smoke run but no ANDROID_* secrets are set; nothing to test"
+            exit 1
           else
             echo "::warning::ANDROID_KEYSTORE_* secrets not set; building a debug APK instead of a signed bundle"
             ./gradlew assembleDebug
           fi
-      # v4 only speaks GitHub's artifact API (GHESNotSupportedError on Forgejo); v3 works here.
+      # v4 only speaks GitHub's artifact API (GHESNotSupportedError on Forgejo); v3 works here. Upstream has
+      # deprecated v3, so revisit when Forgejo's artifact API gains v4 support.
       - uses: actions/upload-artifact@v3
         with:
           name: android-${{ needs.tag.outputs.version }}
