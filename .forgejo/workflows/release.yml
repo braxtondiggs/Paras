@@ -84,10 +84,11 @@ jobs:
         run: |
           chmod +x android/gradlew
           cd android
-          if [ -n "$ANDROID_KEYSTORE_FILE" ]; then
-            for v in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+          if [ -n "$ANDROID_KEYSTORE_FILE$ANDROID_KEYSTORE_PASSWORD$ANDROID_KEY_ALIAS$ANDROID_KEY_PASSWORD" ]; then
+            # Any of the four set means signing was intended: a missing one is a misnamed secret, not "build unsigned".
+            for v in ANDROID_KEYSTORE_FILE ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
               if [ -z "${!v}" ]; then
-                echo "::error::ANDROID_KEYSTORE_FILE is set but $v is empty; set all four ANDROID_* secrets"
+                echo "::error::$v is empty but other ANDROID_* secrets are set; set all four"
                 exit 1
               fi
             done
@@ -95,8 +96,10 @@ jobs:
             echo "$ANDROID_KEYSTORE_FILE" | base64 -d > "$ANDROID_KEYSTORE_PATH"
             trap 'rm -f "$ANDROID_KEYSTORE_PATH"' EXIT
             ./gradlew bundleRelease
-            # Fail here rather than upload an unsigned bundle Play would reject.
-            jarsigner -verify -strict app/build/outputs/bundle/release/app-release.aab
+            # Fail here rather than upload an unsigned bundle Play would reject. jarsigner exits 0 for "jar is
+            # unsigned", so grep the verdict; no -strict because the upload key is self-signed (chain warning).
+            jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tee /tmp/jarsigner.txt
+            grep -q '^jar verified' /tmp/jarsigner.txt
             ls -la app/build/outputs/bundle/release/
           else
             echo "::warning::ANDROID_KEYSTORE_* secrets not set; building a debug APK instead of a signed bundle"
