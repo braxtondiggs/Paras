@@ -28,15 +28,14 @@ Set these under the repository's Actions settings. A workflow that needs a missi
 
 ### Creating the release secrets
 
-**Upload keystore** (once; Play App Signing holds the real app signing key, this is only the upload key). Keep `upload.jks` in a password manager, never in the repo (`*.jks` is gitignored).
+**Keystore**: the app already has one (`release.keystore`, alias `cymbit`); keep using it, since Play ties the package to its fingerprint. Store it in a password manager, never in the repo (`*.jks` / `*.keystore` are gitignored). Only a brand-new app would generate one (`keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000`).
 
 ```sh
-keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
-base64 -i upload.jks | pbcopy   # paste as ANDROID_KEYSTORE_FILE
+base64 -i release.keystore | pbcopy   # paste as ANDROID_KEYSTORE_FILE
 ```
 
-Then add `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`upload`) and `ANDROID_KEY_PASSWORD`.
+Then add `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`cymbit`) and `ANDROID_KEY_PASSWORD`. All four must be set; the key password is usually the same as the keystore password.
 
 **Firebase service account** for project `paras-293d5`: Google Cloud console → IAM & Admin → Service Accounts → create `forgejo-deploy` with the roles _Firebase Admin_, _Cloud Functions Admin_ and _Service Account User_ (add any further role the first deploy's error message names). Create a JSON key and paste its contents as `FIREBASE_SERVICE_ACCOUNT`.
 
-Smoke test either secret with a manual _Release_ run on a throwaway tag (e.g. `v0.0.0-rc.1`), then delete the tag and release.
+**Smoke test**: Actions → _Release_ → Run workflow on any branch. That path builds and signs the bundle only (no tag, release or functions deploy) and uploads it as the `android-smoke` artifact; the log must show `jar verified`. Test the service account locally with `GOOGLE_APPLICATION_CREDENTIALS=sa.json npx firebase-tools@14 projects:list`.

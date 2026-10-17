@@ -8,6 +8,9 @@ name: Release
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+    # Smoke test from any branch: builds and signs the Android bundle with the ANDROID_* secrets and uploads it as
+    # android-smoke. Nothing is tagged, published or deployed.
 
 concurrency:
   group: release
@@ -20,16 +23,23 @@ jobs:
       image: node:22-bookworm
     timeout-minutes: 10
     outputs:
-      version: ${{ steps.tag.outputs.version }}
-      is_release: ${{ steps.tag.outputs.is_release }}
-      functions_changed: ${{ steps.tag.outputs.functions_changed }}
+      version: ${{ steps.tag.outputs.version || steps.smoke.outputs.version }}
+      is_release: ${{ steps.tag.outputs.is_release || steps.smoke.outputs.is_release }}
+      functions_changed: ${{ steps.tag.outputs.functions_changed || 'false' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
-      - run: apt-get update -qq && apt-get install -y -qq jq >/dev/null
+      - id: smoke
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "version=smoke" >> "$GITHUB_OUTPUT"
+          echo "is_release=true" >> "$GITHUB_OUTPUT"
+      - if: github.event_name == 'push'
+        run: apt-get update -qq && apt-get install -y -qq jq >/dev/null
       - id: tag
+        if: github.event_name == 'push'
         env:
           TOKEN: ${{ secrets.AGENT_TOKEN }}
           API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
