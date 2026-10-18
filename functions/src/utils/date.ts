@@ -27,9 +27,8 @@ export function getFormattedDateID(action: 'today' | 'nextDay'): string {
  * Parse ASP date ID to a standardized date
  */
 export function parseASPDate(dateId: string): Date {
-  return dayjs(dateId, 'YYYYMMDD')
-    .startOf('day')
-    .add(5, 'hours') // EST/EDT offset
+  return dayjs.utc(dateId, 'YYYYMMDD')
+    .add(5, 'hours') // matches the 05:00Z the feed collection has always stored
     .toDate();
 }
 
