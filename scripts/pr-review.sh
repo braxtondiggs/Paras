@@ -103,6 +103,15 @@ fi
 
 verdict=$(jq -r .verdict "$out/review.json")
 case "$verdict" in request_changes) event=REQUEST_CHANGES;; *) event=COMMENT;; esac  # never auto-approve
+# Forgejo refuses REQUEST_CHANGES (and APPROVE) from the PR's own author. Agent PRs are opened with this same
+# token, so review them as COMMENT; the verdict stays in the body, which is what pr-fix.sh keys off. ai/* is
+# matched by name so the downgrade does not depend on the /user lookup succeeding.
+head_ref=$(echo "$pr_json" | jq -r .head.ref); pr_author=$(echo "$pr_json" | jq -r .user.login)
+me=$(api "${API%%/repos/*}/user" | jq -r '.login // ""'); [ -n "$me" ] || log "WARN: /user lookup failed; relying on the ai/* branch name for the self-review check."
+if [ "$event" = REQUEST_CHANGES ] && { [[ "$head_ref" == ai/* ]] || { [ -n "$me" ] && [ "$pr_author" = "$me" ]; }; }; then
+  log "PR #$PR_NUMBER is this account's own PR ($pr_author); posting the request_changes verdict as a COMMENT review."
+  event=COMMENT
+fi
 n_comments=$(jq '.comments | length' "$out/review.json")
 body=$(jq -r --arg m "$MODEL" --arg v "$verdict" --argjson n "$n_comments" '
   "🤖 **Claude review** (\($m)) — verdict: `\($v)`, \($n) finding(s)\n\n\(.summary)"' "$out/review.json")
@@ -113,20 +122,29 @@ payload=$(jq -c --arg e "$event" --arg b "$body" --arg sha "${HEAD_SHA:-}" '{
   comments: [.comments[] | {path, new_position: .line, body: ("[\(.severity)] " + .body)}]
 }' "$out/review.json")
 resp=$(api -X POST "$API/pulls/$PR_NUMBER/reviews" -d "$payload")
-if echo "$resp" | jq -e .id >/dev/null 2>&1; then
-  review_id=$(echo "$resp" | jq -r .id)
-  log "Posted review $review_id with $n_comments inline comment(s)."
-  # Review-fix loop: on agent branches with findings, hand the review to pr-fix.yml (it caps its own rounds).
-  head_ref=$(echo "$pr_json" | jq -r .head.ref)
-  if [ "$verdict" != approve ] && [ "$n_comments" -gt 0 ] && [[ "$head_ref" == ai/* ]]; then
-    code=$(api -o /dev/null -w '%{http_code}' -X POST "$API/actions/workflows/pr-fix.yml/dispatches"       -d "$(jq -n --arg pr "$PR_NUMBER" --arg r "$review_id" '{ref:"master", inputs:{pr:$pr, review_id:$r}}')")
-    log "Dispatched pr-fix for review $review_id: HTTP $code"
-  fi
-else
-  # Inline placement can fail when a line isn't part of the diff; fall back to one plain comment.
-  log "Review API rejected the inline comments ($(echo "$resp" | jq -r '.message // "unknown"' | head -c 200)); posting a plain comment."
+if ! echo "$resp" | jq -e .id >/dev/null 2>&1 && [ "$n_comments" -gt 0 ]; then
+  # Inline placement fails when a line is outside the diff hunks. Retry once as the same review event with the
+  # findings in the body: still a review object, so pr-fix.sh can read them; never a plain issue comment.
+  msg=$(echo "$resp" | jq -r '.message // "unknown"' 2>/dev/null | head -c 300)
+  log "Review API rejected the inline comments ($msg); retrying with the findings in the review body."
   flat=$(jq -r '.comments[] | "- `\(.path):\(.line)` [\(.severity)] \(.body)"' "$out/review.json")
-  api -X POST "$API/issues/$PR_NUMBER/comments" -d "$(jq -n --arg b "$body
+  payload=$(jq -cn --arg e "$event" --arg b "$body
 
-$flat" '{body:$b}')" >/dev/null
+$flat" --arg sha "${HEAD_SHA:-}" '{event: $e, body: $b, commit_id: $sha, comments: []}')
+  resp=$(api -X POST "$API/pulls/$PR_NUMBER/reviews" -d "$payload")
+fi
+if ! echo "$resp" | jq -e .id >/dev/null 2>&1; then
+  # A review that is not a Forgejo review object never reaches pr-fix.yml, so fail loudly instead of degrading.
+  msg=$(echo "$resp" | jq -r '.message // "unknown"' 2>/dev/null | head -c 300)
+  log "Review API rejected the review for PR #$PR_NUMBER: $msg"
+  notify "Paras PR review: could not post review on PR #$PR_NUMBER" "$msg" high
+  exit 1
+fi
+review_id=$(echo "$resp" | jq -r .id)
+log "Posted review $review_id ($event) with $(echo "$payload" | jq '.comments | length') inline comment(s)."
+# Review-fix loop: on agent branches with findings, hand the review to pr-fix.yml (it caps its own rounds).
+if [ "$verdict" != approve ] && [ "$n_comments" -gt 0 ] && [[ "$head_ref" == ai/* ]]; then
+  code=$(api -o /dev/null -w '%{http_code}' -X POST "$API/actions/workflows/pr-fix.yml/dispatches" \
+    -d "$(jq -n --arg pr "$PR_NUMBER" --arg r "$review_id" '{ref:"master", inputs:{pr:$pr, review_id:$r}}')")
+  log "Dispatched pr-fix for review $review_id: HTTP $code"
 fi
