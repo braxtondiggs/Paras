@@ -14,7 +14,7 @@ import { Preferences } from '@capacitor/preferences';
 import { PushNotifications, Token } from '@capacitor/push-notifications';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { AlertController, IonApp, IonRouterOutlet, Platform } from '@ionic/angular/standalone';
-import { ThemeService } from '@core/services';
+import { SettingsService, ThemeService } from '@core/services';
 import { filter, race, take, timer } from 'rxjs';
 import { register } from 'swiper/element';
 
@@ -36,6 +36,7 @@ export class AppComponent implements OnInit {
   private readonly alert = inject(AlertController);
   private readonly platform = inject(Platform);
   private readonly router = inject(Router);
+  private readonly settingsService = inject(SettingsService);
   private readonly themeService = inject(ThemeService);
   public readonly environmentInjector = inject(EnvironmentInjector);
 
@@ -76,6 +77,9 @@ export class AppComponent implements OnInit {
 
     PushNotifications.addListener('registration', async (token: Token) => {
       await Preferences.set({ key: 'token', value: token.value });
+      // The Cloud Function sends to the token on users/<uid>, so it must land there and not only in Preferences.
+      const result = await this.settingsService.saveToken(token.value);
+      if (!result.success) console.error('Failed to save the push token to the user document:', result.error);
     });
 
     PushNotifications.addListener('registrationError', async (error: unknown) => {

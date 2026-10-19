@@ -3,7 +3,7 @@ import type { ComponentFixture } from '@angular/core/testing';
 import { Analytics, setUserProperties } from '@angular/fire/analytics';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, NavigationCancel, NavigationEnd, NavigationError, Router } from '@angular/router';
-import { ThemeService } from '@core/services';
+import { SettingsService, ThemeService } from '@core/services';
 import { AlertController, Platform } from '@ionic/angular/standalone';
 import { createComponentFactory, type Spectator } from '@ngneat/spectator/jest';
 import { Subject } from 'rxjs';
@@ -115,6 +115,10 @@ describe('AppComponent', () => {
     }
   };
 
+  const mockSettingsService = {
+    saveToken: jest.fn().mockResolvedValue({ success: true })
+  };
+
   const createComponent = createComponentFactory({
     component: AppComponent,
     providers: [
@@ -141,6 +145,10 @@ describe('AppComponent', () => {
       {
         provide: ActivatedRoute,
         useValue: mockActivatedRoute
+      },
+      {
+        provide: SettingsService,
+        useValue: mockSettingsService
       }
     ],
     shallow: true
@@ -173,6 +181,7 @@ describe('AppComponent', () => {
     mockPushNotifications.register.mockClear().mockResolvedValue(undefined);
     mockPushNotifications.addListener.mockClear().mockResolvedValue({ remove: jest.fn() });
     mockSetUserProperties.mockClear();
+    mockSettingsService.saveToken.mockReset().mockResolvedValue({ success: true });
 
     // Clear localStorage
     localStorage.clear();
@@ -417,6 +426,37 @@ describe('AppComponent', () => {
       await registrationCallback?.(mockToken);
 
       expect(mockPreferences.set).toHaveBeenCalledWith({ key: 'token', value: 'test-token-123' });
+    });
+
+    it('saves the token to the user document on registration', async () => {
+      let registrationCallback: Function | undefined;
+      mockPushNotifications.addListener.mockImplementation((event: string, callback: Function) => {
+        if (event === 'registration') registrationCallback = callback;
+        return Promise.resolve({ remove: jest.fn() });
+      });
+
+      await (component as any).getFCMNotification();
+      await registrationCallback?.({ value: 'tok' });
+
+      expect(mockSettingsService.saveToken).toHaveBeenCalledTimes(1);
+      expect(mockSettingsService.saveToken).toHaveBeenCalledWith('tok');
+    });
+
+    it('logs when the token cannot be saved to the user document', async () => {
+      let registrationCallback: Function | undefined;
+      mockPushNotifications.addListener.mockImplementation((event: string, callback: Function) => {
+        if (event === 'registration') registrationCallback = callback;
+        return Promise.resolve({ remove: jest.fn() });
+      });
+      const failure = new Error('denied');
+      mockSettingsService.saveToken.mockResolvedValueOnce({ success: false, error: failure });
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      await (component as any).getFCMNotification();
+      await registrationCallback?.({ value: 'tok' });
+
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('push token'), failure);
+      consoleSpy.mockRestore();
     });
 
     it('should show alert on registration error', async () => {

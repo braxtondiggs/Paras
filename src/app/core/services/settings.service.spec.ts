@@ -156,6 +156,42 @@ describe('SettingsService', () => {
     consoleSpy.mockRestore();
   });
 
+  describe('saveToken', () => {
+    it('merges the token into users/<uid> even when the user document does not exist yet', async () => {
+      authServiceMock.user$.next(mockUser);
+      const setSpy = jest.spyOn(spectator.service, 'set').mockResolvedValue({ success: true });
+
+      const result = await spectator.service.saveToken('tok');
+
+      expect(result).toEqual({ success: true });
+      expect(setSpy).toHaveBeenCalledWith(mockUser.uid, { token: 'tok', type: 'NYC' }, true);
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it('waits for the user before writing when registration fires before sign-in', async () => {
+      const setSpy = jest.spyOn(spectator.service, 'set').mockResolvedValue({ success: true });
+
+      const pending = spectator.service.saveToken('tok');
+      await Promise.resolve();
+      expect(setSpy).not.toHaveBeenCalled();
+
+      authServiceMock.user$.next(mockUser);
+      await pending;
+
+      expect(setSpy).toHaveBeenCalledWith(mockUser.uid, { token: 'tok', type: 'NYC' }, true);
+    });
+
+    it('returns the failure when the write fails', async () => {
+      authServiceMock.user$.next(mockUser);
+      const failure = new Error('denied');
+      jest.spyOn(spectator.service, 'set').mockResolvedValue({ success: false, error: failure });
+
+      const result = await spectator.service.saveToken('tok');
+
+      expect(result).toEqual({ success: false, error: failure });
+    });
+  });
+
   it('short-circuits updateSettings with missing user', async () => {
     const result = await spectator.service.updateSettings({ darkMode: true });
     expect(result.success).toBe(false);

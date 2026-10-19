@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Preferences } from '@capacitor/preferences';
 import { firstValueFrom, of } from 'rxjs';
-import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
+import { catchError, filter, map, shareReplay, switchMap } from 'rxjs/operators';
 import type { NotificationTime, OperationResult, Setting } from '../types/firestore.types';
 import { AuthService } from './auth.service';
 import { BaseFirestoreService } from './base-firestore.service';
@@ -174,6 +174,16 @@ export class SettingsService extends BaseFirestoreService<Setting> {
         error: error as Error
       };
     }
+  }
+
+  /**
+   * Writes the FCM token (and the notification type) to users/<uid> with a merging set. Registration can fire
+   * before the anonymous sign-in resolves and before users/<uid> exists, so this waits for the user and must not
+   * go through updateSettings, whose updateDoc fails on a missing document.
+   */
+  async saveToken(token: string): Promise<OperationResult> {
+    const user = await firstValueFrom(this.authService.user$.pipe(filter(user => !!user)));
+    return this.set(user.uid, { token, type: 'NYC' } as Omit<Setting, 'id'>, true);
   }
 
   clearError(): void {
