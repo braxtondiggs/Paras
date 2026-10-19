@@ -3,10 +3,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  CUSTOM_ELEMENTS_SCHEMA,
   DestroyRef,
   effect,
-  ElementRef,
   inject,
   OnInit,
   signal,
@@ -25,6 +23,8 @@ import advancedFormat from 'dayjs/plugin/advancedFormat';
 import { FeedService, LoggerService, type Feed } from '@core/services';
 import { Calendar } from '@shared/interfaces';
 import { CardDetailComponent } from '../card-detail/card-detail.component';
+import { SwiperContainerComponent } from '../swiper-container/swiper-container.component';
+import { SwiperSlideComponent } from '../swiper-container/swiper-slide.component';
 import * as calendarUtils from './calendar.utils';
 import { CALENDAR_CONFIG, type CalendarErrorHandler } from './calendar.utils';
 
@@ -39,8 +39,18 @@ interface SwiperInstance {
 
 @Component({
   standalone: true,
-  imports: [CardDetailComponent, IonRippleEffect, IonButton, IonIcon, IonItem, IonLabel, NgClass, DatePipe],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  imports: [
+    CardDetailComponent,
+    IonRippleEffect,
+    IonButton,
+    IonIcon,
+    IonItem,
+    IonLabel,
+    NgClass,
+    DatePipe,
+    SwiperContainerComponent,
+    SwiperSlideComponent
+  ],
   selector: 'app-horizontal-calendar',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './horizontal-calendar.component.html',
@@ -48,7 +58,7 @@ interface SwiperInstance {
 })
 export class HorizontalCalendarComponent implements OnInit {
   @ViewChild('swiper', { static: false })
-  public readonly swiper?: ElementRef<{ swiper: SwiperInstance }>;
+  public readonly swiper?: SwiperContainerComponent;
 
   // Injected dependencies
   private readonly feedService = inject(FeedService);

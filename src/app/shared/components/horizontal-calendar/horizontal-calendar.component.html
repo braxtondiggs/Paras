@@ -22,13 +22,13 @@
 
   <!-- Calendar Navigation -->
   <div class="calendar-swiper-container ion-padding-horizontal">
-    <swiper-container
+    <app-swiper-container
       #swiper
       [initialSlide]="6"
       [slidesPerView]="7"
       [spaceBetween]="4"
       [centeredSlides]="true"
-      (swiperslidechange)="onSlideChange()"
+      (slideChange)="onSlideChange()"
       class="swiper"
     >
       @for (item of items(); track item.text; let i = $index) {
@@ -54,7 +54,7 @@
           </button>
         </swiper-slide>
       }
-    </swiper-container>
+    </app-swiper-container>
 
     <!-- Navigation buttons with improved accessibility -->
     <ion-button

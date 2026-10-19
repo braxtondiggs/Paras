@@ -2,3 +2,5 @@
 export * from './card-detail/card-detail.component';
 export * from './horizontal-calendar/horizontal-calendar.component';
 export * from './modal-detail/modal-detail.component';
+export * from './swiper-container/swiper-container.component';
+export * from './swiper-container/swiper-slide.component';

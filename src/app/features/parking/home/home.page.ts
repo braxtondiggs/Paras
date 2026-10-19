@@ -3,7 +3,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  CUSTOM_ELEMENTS_SCHEMA,
   DestroyRef,
   ElementRef,
   inject,
@@ -29,6 +28,8 @@ import {
 } from '@ionic/angular/standalone';
 import { HorizontalCalendarComponent } from '@shared/components/horizontal-calendar/horizontal-calendar.component';
 import { ModalDetailComponent } from '@shared/components/modal-detail/modal-detail.component';
+import { SwiperContainerComponent } from '@shared/components/swiper-container/swiper-container.component';
+import { SwiperSlideComponent } from '@shared/components/swiper-container/swiper-slide.component';
 import dayjs, { type Dayjs } from 'dayjs';
 import { addIcons } from 'ionicons';
 import { calendarOutline, settingsOutline } from 'ionicons/icons';
@@ -84,9 +85,10 @@ const ROUTE_PATHS = {
     IonSpinner,
     IonTitle,
     IonToolbar,
-    RouterLink
+    RouterLink,
+    SwiperContainerComponent,
+    SwiperSlideComponent
   ],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA],
   selector: 'app-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -121,7 +123,7 @@ export class HomePage implements AfterViewInit {
   readonly isCalendarView = computed(() => this.activeSlide() === HOME_CONFIG.SLIDES.CALENDAR);
   readonly isDateTimeView = computed(() => this.activeSlide() === HOME_CONFIG.SLIDES.DATETIME);
 
-  @ViewChild('swiper', { static: false }) swiper?: ElementRef;
+  @ViewChild('swiper', { static: false }) swiper?: SwiperContainerComponent;
   @ViewChild('calendar', { read: ElementRef, static: false }) calendar?: ElementRef;
 
   constructor() {
