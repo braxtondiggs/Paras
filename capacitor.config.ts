@@ -22,6 +22,7 @@ const config: CapacitorConfig = {
     '@capacitor/network',
     '@capacitor/preferences',
     '@capacitor/push-notifications',
+    '@capacitor/splash-screen',
     'capacitor-email-composer',
   ],
   plugins: {
@@ -41,25 +42,22 @@ const config: CapacitorConfig = {
       alias: 'haptics',
     },
     SplashScreen: {
-      launchShowDuration: 3000,
-      launchAutoHide: true,
+      // Stays up until AppComponent calls SplashScreen.hide() after the first route renders, so
+      // Angular's boot never shows as a blank frame. Drawables come from `npx @capacitor/assets generate`.
+      launchAutoHide: false,
       launchFadeOutDuration: 300,
-      backgroundColor: '#ffffff',
+      backgroundColor: '#A77EB0',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
-      androidSpinnerStyle: 'large',
-      spinnerColor: '#999999',
       splashFullScreen: true,
       splashImmersive: true,
-      layoutName: 'launch_screen',
-      useDialog: true,
     },
   },
   android: {
     captureInput: true,
     appendUserAgent: 'ASP-NYC-App',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#A77EB0',
     useLegacyBridge: false,
     minWebViewVersion: 60,
   },

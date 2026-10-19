@@ -8,14 +8,20 @@ import {
   signal
 } from '@angular/core';
 import { Analytics, setUserProperties } from '@angular/fire/analytics';
+import { NavigationCancel, NavigationEnd, NavigationError, Router } from '@angular/router';
 import { Network } from '@capacitor/network';
 import { Preferences } from '@capacitor/preferences';
 import { PushNotifications, Token } from '@capacitor/push-notifications';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { AlertController, IonApp, IonRouterOutlet, Platform } from '@ionic/angular/standalone';
 import { ThemeService } from '@core/services';
+import { filter, race, take, timer } from 'rxjs';
 import { register } from 'swiper/element';
 
 register();
+
+/** Upper bound on how long the native splash may cover the app if the first navigation never settles. */
+const SPLASH_HIDE_TIMEOUT_MS = 10_000;
 
 @Component({
   imports: [IonApp, IonRouterOutlet],
@@ -29,6 +35,7 @@ export class AppComponent implements OnInit {
   private readonly analytics = inject(Analytics);
   private readonly alert = inject(AlertController);
   private readonly platform = inject(Platform);
+  private readonly router = inject(Router);
   private readonly themeService = inject(ThemeService);
   public readonly environmentInjector = inject(EnvironmentInjector);
 
@@ -38,6 +45,8 @@ export class AppComponent implements OnInit {
   readonly isAppReady = signal(false);
 
   ngOnInit() {
+    // Before anything async: a slow or failed platform.ready() must not leave the splash up.
+    if (this.platform.is('cordova')) this.hideSplashAfterFirstRender();
     this.initializeApp();
     this.setTheme();
   }
@@ -110,6 +119,30 @@ export class AppComponent implements OnInit {
         setUserProperties(this.analytics, { darkMode: darkMode.toString() });
       });
     }
+  }
+
+  /**
+   * The native splash (launchAutoHide: false in capacitor.config.ts) stays up until the first navigation has
+   * settled, so Angular's boot never shows as a blank frame. "Settled" includes cancelled and failed
+   * navigations (a rejecting guard, a lazy chunk that won't load offline): the user must still reach whatever
+   * the app can show. A timer bounds the wait in case no router event ever arrives, and if routing already
+   * finished before we got here we hide immediately.
+   */
+  private hideSplashAfterFirstRender(): void {
+    const hide = () => void SplashScreen.hide({ fadeOutDuration: 300 });
+
+    if (this.router.navigated) {
+      hide();
+      return;
+    }
+
+    const firstNavigationSettled$ = this.router.events.pipe(
+      filter(
+        event => event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError
+      )
+    );
+
+    race(firstNavigationSettled$, timer(SPLASH_HIDE_TIMEOUT_MS)).pipe(take(1)).subscribe(hide);
   }
 
   private async showNetworkAlert() {

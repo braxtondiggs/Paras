@@ -2,11 +2,11 @@
 import type { ComponentFixture } from '@angular/core/testing';
 import { Analytics, setUserProperties } from '@angular/fire/analytics';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, NavigationCancel, NavigationEnd, NavigationError, Router } from '@angular/router';
+import { ThemeService } from '@core/services';
 import { AlertController, Platform } from '@ionic/angular/standalone';
 import { createComponentFactory, type Spectator } from '@ngneat/spectator/jest';
 import { Subject } from 'rxjs';
-import { ThemeService } from '@core/services';
 import { AppComponent } from './app.component';
 
 // Mock Capacitor modules
@@ -22,6 +22,12 @@ jest.mock('@capacitor/preferences', () => ({
     get: jest.fn().mockResolvedValue({ value: null }),
     set: jest.fn().mockResolvedValue(undefined),
     remove: jest.fn().mockResolvedValue(undefined)
+  }
+}));
+
+jest.mock('@capacitor/splash-screen', () => ({
+  SplashScreen: {
+    hide: jest.fn().mockResolvedValue(undefined)
   }
 }));
 
@@ -279,6 +285,76 @@ describe('AppComponent', () => {
       await (component as any).initializeApp();
 
       expect(mockPushNotifications.requestPermissions).toHaveBeenCalled();
+    });
+
+    it('hides the native splash after the first navigation on cordova', () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      const { SplashScreen } = jest.requireMock('@capacitor/splash-screen');
+      // Fresh stream: take(1) subscriptions from earlier tests would otherwise also fire on this emit.
+      mockRouter.events = new Subject();
+
+      component.ngOnInit();
+      expect(SplashScreen.hide).not.toHaveBeenCalled();
+
+      mockRouter.events.next(new NavigationEnd(1, '/home', '/home'));
+      mockRouter.events.next(new NavigationEnd(2, '/settings', '/settings'));
+
+      expect(SplashScreen.hide).toHaveBeenCalledTimes(1);
+      expect(SplashScreen.hide).toHaveBeenCalledWith({ fadeOutDuration: 300 });
+    });
+
+    it.each([
+      ['cancelled', () => new NavigationCancel(1, '/home', 'guard rejected')],
+      ['failed', () => new NavigationError(1, '/home', new Error('chunk load failed'))]
+    ])('hides the native splash when the first navigation is %s', (_label, makeEvent) => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      const { SplashScreen } = jest.requireMock('@capacitor/splash-screen');
+      mockRouter.events = new Subject();
+
+      component.ngOnInit();
+      mockRouter.events.next(makeEvent());
+
+      expect(SplashScreen.hide).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides the native splash after the safety timeout when no router event arrives', () => {
+      jest.useFakeTimers();
+      try {
+        mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+        const { SplashScreen } = jest.requireMock('@capacitor/splash-screen');
+        mockRouter.events = new Subject();
+
+        component.ngOnInit();
+        jest.advanceTimersByTime(9_999);
+        expect(SplashScreen.hide).not.toHaveBeenCalled();
+
+        jest.advanceTimersByTime(1);
+        expect(SplashScreen.hide).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('hides the native splash immediately when routing already finished', () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      const { SplashScreen } = jest.requireMock('@capacitor/splash-screen');
+      (mockRouter as any).navigated = true;
+
+      component.ngOnInit();
+
+      expect(SplashScreen.hide).toHaveBeenCalledTimes(1);
+      (mockRouter as any).navigated = false;
+    });
+
+    it('does not touch the splash on web', () => {
+      mockPlatform.is.mockReturnValue(false);
+      const { SplashScreen } = jest.requireMock('@capacitor/splash-screen');
+      mockRouter.events = new Subject();
+
+      component.ngOnInit();
+      mockRouter.events.next(new NavigationEnd(1, '/home', '/home'));
+
+      expect(SplashScreen.hide).not.toHaveBeenCalled();
     });
 
     it('should not request FCM notifications on iOS', async () => {

@@ -21,8 +21,9 @@
     </style>
 
     <style name="AppTheme.Splash" parent="Theme.SplashScreen">
-        <item name="android:windowSplashScreenBackground">@color/colorPrimary</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowSplashScreenBackground">@color/splashBackground</item>
+        <!-- Foreground layer only: the adaptive icon would draw its background circle behind the sign. -->
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_adaptive_fore</item>
         <item name="android:windowSplashScreenAnimationDuration">300</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>

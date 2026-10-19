@@ -20,8 +20,9 @@
     </style>
 
     <style name="AppTheme.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/colorPrimary</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenBackground">@color/splashBackground</item>
+        <!-- Foreground layer only: the adaptive icon would draw its background circle behind the sign. -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_adaptive_fore</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 </resources>

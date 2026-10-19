@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#4F46E5</color>
+    <!-- Brand palette: the icon mauve #A77EB0 is the brand; #7A5A8A is the shade that passes AA with white text (see src/theme/variables.scss). -->
+    <color name="colorPrimary">#7A5A8A</color>
     <color name="colorOnPrimary">#FFFFFF</color>
-    <color name="colorPrimaryDark">#312E81</color>
-    <color name="colorPrimaryContainer">#E0E7FF</color>
-    <color name="colorSecondary">#6366F1</color>
+    <color name="colorPrimaryDark">#6B4F79</color>
+    <color name="colorPrimaryContainer">#EADFEE</color>
+    <color name="colorSecondary">#A77EB0</color>
     <color name="colorOnSecondary">#FFFFFF</color>
     <color name="colorTertiary">#14B8A6</color>
     <color name="colorOnTertiary">#FFFFFF</color>
@@ -12,5 +13,6 @@
     <color name="colorOnSurface">#1F2937</color>
     <color name="colorBackground">#F8FAFC</color>
     <color name="colorOnBackground">#1F2937</color>
-    <color name="colorAccent">#6366F1</color>
+    <color name="colorAccent">#A77EB0</color>
+    <color name="splashBackground">#A77EB0</color>
 </resources>

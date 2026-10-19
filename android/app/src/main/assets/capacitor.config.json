@@ -8,6 +8,7 @@
 		"@capacitor/network",
 		"@capacitor/preferences",
 		"@capacitor/push-notifications",
+		"@capacitor/splash-screen",
 		"capacitor-email-composer"
 	],
 	"plugins": {
@@ -31,25 +32,20 @@
 			"alias": "haptics"
 		},
 		"SplashScreen": {
-			"launchShowDuration": 3000,
-			"launchAutoHide": true,
+			"launchAutoHide": false,
 			"launchFadeOutDuration": 300,
-			"backgroundColor": "#ffffff",
+			"backgroundColor": "#A77EB0",
 			"androidSplashResourceName": "splash",
 			"androidScaleType": "CENTER_CROP",
 			"showSpinner": false,
-			"androidSpinnerStyle": "large",
-			"spinnerColor": "#999999",
 			"splashFullScreen": true,
-			"splashImmersive": true,
-			"layoutName": "launch_screen",
-			"useDialog": true
+			"splashImmersive": true
 		}
 	},
 	"android": {
 		"captureInput": true,
 		"appendUserAgent": "ASP-NYC-App",
-		"backgroundColor": "#ffffff",
+		"backgroundColor": "#A77EB0",
 		"useLegacyBridge": false,
 		"minWebViewVersion": 60
 	}
