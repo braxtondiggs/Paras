@@ -77,6 +77,13 @@ export function getNYCDate(): dayjs.Dayjs {
 }
 
 /**
+ * Get the NYC hour of a time (default now) in the 'H:00' form of NotificationType, e.g. '9:00'
+ */
+export function getNYCHour(time?: string): string {
+  return dayjs(time).tz(NYC_TIMEZONE).format('H:00');
+}
+
+/**
  * Format date for API requests
  */
 export function formatDateForAPI(date?: string): string {

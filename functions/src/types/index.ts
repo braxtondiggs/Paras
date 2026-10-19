@@ -1,9 +1,9 @@
 // User notification preferences interface
 export interface Notification {
   exceptionOnly: boolean;
-  nextDay: string;
+  nextDay: NotificationType;
   nextDayCustom: string;
-  today: string;
+  today: NotificationType;
   todayCustom: string;
   token: string;
   type: string;
@@ -46,7 +46,11 @@ export interface IASPResponse {
 
 // Notification type definitions
 export type NotificationAction = 'today' | 'nextDay';
-export type NotificationType = 'immediately' | 'custom';
+// Mirrors NotificationTime in src/app/core/types/firestore.types.ts:60
+export type NotificationHour = '7:00' | '8:00' | '9:00' | '10:00';
+export type NotificationType = 'none' | 'custom' | NotificationHour;
+// Recipients of one send: a fixed hour, custom times, or every fixed hour (the interim nextDay rule, #182)
+export type NotificationMatch = 'custom' | NotificationHour | 'any-hour';
 
 // Error types
 export interface ASPError extends Error {

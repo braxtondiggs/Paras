@@ -1,4 +1,5 @@
-import { ASPItem } from '../types';
+import { NOTIFICATION_HOURS } from '../config/constants';
+import { ASPItem, NotificationHour } from '../types';
 
 /**
  * Validation utilities for ASP data processing
@@ -35,6 +36,13 @@ export function isValidDateFormat(date: string): boolean {
  */
 export function isValidNotificationToken(token: string): boolean {
   return Boolean(token && token.trim().length > 0);
+}
+
+/**
+ * Check if a value is one of the fixed notification hours
+ */
+export function isNotificationHour(value: string): value is NotificationHour {
+  return (NOTIFICATION_HOURS as readonly string[]).includes(value);
 }
 
 /**

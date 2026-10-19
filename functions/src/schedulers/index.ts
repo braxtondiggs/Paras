@@ -1,10 +1,13 @@
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { defineSecret } from 'firebase-functions/params';
+import { logger } from 'firebase-functions/v2';
 
 import { getDb } from '../config/firebase';
 import { createScheduleOptions, SCHEDULES } from '../config/constants';
 import { ASPDataService } from '../services/asp-data.service';
 import { NotificationService } from '../services/notification.service';
+import { getNYCHour } from '../utils/date';
+import { isNotificationHour } from '../utils/validation';
 
 // Define secrets
 const aspApiKey = defineSecret('ASP_API_KEY');
@@ -52,25 +55,33 @@ export const getCustomNotificationsScheduled = onSchedule(
 );
 
 /**
- * Scheduled function to send today's notifications at 7:30 AM
+ * Scheduled function to send today's notifications hourly 7:00-10:00 AM to users who picked that hour
  */
 export const getNotificationsToday = onSchedule(
   createScheduleOptions(SCHEDULES.TODAY_NOTIFICATIONS),
-  async () => {
+  async (event) => {
+    // The scheduled hour, not the clock, so a late start still matches the hour this run is for
+    const hour = getNYCHour(event.scheduleTime);
+    if (!isNotificationHour(hour)) {
+      logger.info(`No today notifications for hour ${hour}`);
+      return;
+    }
+
     const db = getDb();
     const notificationService = new NotificationService(db);
-    await notificationService.sendImmediateNotifications('today');
+    await notificationService.sendNotifications('today', hour);
   }
 );
 
 /**
- * Scheduled function to send tomorrow's notifications at 4:00 PM
+ * Scheduled function to send tomorrow's notifications at 4:00 PM to users with any fixed hour
+ * (interim until the nextDay evening hours are settled on #182)
  */
 export const getNotificationsTomorrow = onSchedule(
   createScheduleOptions(SCHEDULES.TOMORROW_NOTIFICATIONS),
   async () => {
     const db = getDb();
     const notificationService = new NotificationService(db);
-    await notificationService.sendImmediateNotifications('nextDay');
+    await notificationService.sendNotifications('nextDay', 'any-hour');
   }
 );

@@ -1,4 +1,4 @@
-import { Firestore, QueryDocumentSnapshot, WriteResult } from 'firebase-admin/firestore';
+import { FieldValue, Firestore, QueryDocumentSnapshot, WriteResult } from 'firebase-admin/firestore';
 import {
   BatchResponse,
   FirebaseMessagingError,
@@ -7,8 +7,8 @@ import {
 } from 'firebase-admin/messaging';
 import { logger } from 'firebase-functions/v2';
 
-import { COLLECTIONS, NOTIFICATION_TITLE } from '../config/constants';
-import { Feed, Notification, NotificationAction, NotificationType } from '../types';
+import { COLLECTIONS, NOTIFICATION_HOURS, NOTIFICATION_TITLE } from '../config/constants';
+import { Feed, Notification, NotificationAction, NotificationMatch } from '../types';
 import { getFormattedDateID, isCustomNotificationActive } from '../utils/date';
 import { createParkingNotification, sanitizeNotificationText, validateNotificationPayload } from '../utils/notification';
 import { processNotificationBody } from '../utils/text';
@@ -88,7 +88,7 @@ export class NotificationService {
     tokens: string[],
     snapshots: QueryDocumentSnapshot[]
   ): Promise<void> {
-    const invalidTokenDeletions: Promise<WriteResult>[] = [];
+    const invalidTokenClears: Promise<WriteResult>[] = [];
     const retryableErrors: string[] = [];
 
     response.responses.forEach((result: SendResponse, index: number) => {
@@ -103,9 +103,10 @@ export class NotificationService {
 
         // Handle different error types according to Firebase best practices
         if (this.isInvalidToken(errorCode)) {
-          logger.info(`Marking invalid token for deletion: ${token}`);
+          logger.info(`Clearing invalid token: ${token}`);
+          // The users doc also holds the user's settings, so clear only the token
           if (snapshots[index]) {
-            invalidTokenDeletions.push(snapshots[index].ref.delete());
+            invalidTokenClears.push(snapshots[index].ref.update({ token: FieldValue.delete() }));
           }
         } else if (this.isRetryableError(errorCode)) {
           if (typeof token === 'string') {
@@ -116,9 +117,9 @@ export class NotificationService {
     });
 
     // Clean up invalid tokens
-    if (invalidTokenDeletions.length > 0) {
-      await Promise.all(invalidTokenDeletions);
-      logger.info(`${invalidTokenDeletions.length} invalid tokens were deleted`);
+    if (invalidTokenClears.length > 0) {
+      await Promise.all(invalidTokenClears);
+      logger.info(`${invalidTokenClears.length} invalid tokens were cleared`);
     }
 
     // Log retry candidates for monitoring
@@ -131,7 +132,7 @@ export class NotificationService {
     logger.info(`Notification batch completed`, {
       successful: response.successCount,
       failed: response.failureCount,
-      invalidTokens: invalidTokenDeletions.length,
+      invalidTokens: invalidTokenClears.length,
       retryable: retryableErrors.length
     });
   }
@@ -193,44 +194,46 @@ export class NotificationService {
    */
   private async getNotificationRecipients(
     action: NotificationAction,
-    type: NotificationType
+    type: NotificationMatch
   ): Promise<{ tokens: string[]; snapshots: QueryDocumentSnapshot[] }> {
     const tokens: string[] = [];
     const snapshots: QueryDocumentSnapshot[] = [];
+    const seen = new Set<string>();
 
-    const querySnapshot = await this.db
-      .collection(COLLECTIONS.NOTIFICATIONS)
-      .where(action, '==', type)
+    const users = this.db.collection(COLLECTIONS.USERS);
+    const querySnapshot = await (type === 'any-hour'
+      ? users.where(action, 'in', NOTIFICATION_HOURS)
+      : users.where(action, '==', type))
       .where('type', '==', 'NYC')
       .get();
 
     querySnapshot.forEach(doc => {
-      snapshots.push(doc);
       const data = doc.data() as Notification;
       const { token } = data;
       const customType = data[`${action}Custom`];
 
-      if (!isValidNotificationToken(token)) {
+      // Skip duplicates so tokens[i] stays the token of snapshots[i]
+      if (!isValidNotificationToken(token) || seen.has(token)) {
         return;
       }
 
       // For custom notifications, check if it's time to send
-      if (type === 'custom') {
-        if (customType && isCustomNotificationActive(customType)) {
-          tokens.push(token);
-        }
-      } else {
-        tokens.push(token);
+      if (type === 'custom' && !(customType && isCustomNotificationActive(customType))) {
+        return;
       }
+
+      seen.add(token);
+      tokens.push(token);
+      snapshots.push(doc);
     });
 
-    return { tokens: Array.from(new Set(tokens)), snapshots };
+    return { tokens, snapshots };
   }
 
   /**
    * Process and send notifications for a specific action and type
    */
-  async sendNotifications(action: NotificationAction, type: NotificationType): Promise<void> {
+  async sendNotifications(action: NotificationAction, type: NotificationMatch): Promise<void> {
     const dateId = getFormattedDateID(action);
 
     // Get feed data for the target date
@@ -293,14 +296,6 @@ export class NotificationService {
     });
 
     return { tokens: filteredTokens, snapshots: filteredSnapshots };
-  }
-
-  /**
-   * Send immediate notifications (today/tomorrow)
-   */
-  async sendImmediateNotifications(action: NotificationAction): Promise<void> {
-    logger.info(`Processing immediate notifications for ${action}`);
-    await this.sendNotifications(action, 'immediately');
   }
 
   /**
