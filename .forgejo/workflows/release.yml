@@ -8,9 +8,13 @@ name: Release
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+    # Smoke test (dev, master, release/*; the owner may pick another ref): builds and signs the Android bundle,
+    # uploads it as android-smoke, and checks the Firebase credentials. Nothing is tagged, published or deployed.
 
 concurrency:
-  group: release
+  # Smoke runs get their own group so a dispatch can never cancel a queued release run.
+  group: ${{ github.event_name == 'workflow_dispatch' && 'release-smoke' || 'release' }}
   cancel-in-progress: false
 
 jobs:
@@ -20,16 +24,39 @@ jobs:
       image: node:22-bookworm
     timeout-minutes: 10
     outputs:
-      version: ${{ steps.tag.outputs.version }}
-      is_release: ${{ steps.tag.outputs.is_release }}
-      functions_changed: ${{ steps.tag.outputs.functions_changed }}
+      version: ${{ steps.tag.outputs.version || steps.smoke.outputs.version }}
+      is_release: ${{ steps.tag.outputs.is_release || steps.smoke.outputs.is_release }}
+      functions_changed: ${{ steps.tag.outputs.functions_changed || steps.smoke.outputs.functions_changed }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
-      - run: apt-get update -qq && apt-get install -y -qq jq >/dev/null
+      - id: smoke
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          REF: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          # The android job holds the Play upload keystore and the functions job the Firebase credentials, so a
+          # smoke run from an arbitrary branch hands them to whatever that branch's workflow, gradle files or npm
+          # scripts do. Trusted refs only, unless the repository owner dispatched it (they chose the ref, e.g. to
+          # test a workflow change before merging). This guards against mistakes, not against a hostile branch:
+          # the check lives in the dispatched ref's own copy of this file.
+          case "$REF" in
+            dev|master|release/*) ;;
+            *) if [ "$ACTOR" != "$OWNER" ]; then
+                 echo "::error::Smoke runs are limited to dev, master and release/* (got '$REF' from '$ACTOR')"; exit 1
+               fi ;;
+          esac
+          echo "version=smoke" >> "$GITHUB_OUTPUT"
+          echo "is_release=true" >> "$GITHUB_OUTPUT"
+          echo "functions_changed=true" >> "$GITHUB_OUTPUT"
+      - if: github.event_name == 'push'
+        run: apt-get update -qq && apt-get install -y -qq jq >/dev/null
       - id: tag
+        if: github.event_name == 'push'
         env:
           TOKEN: ${{ secrets.AGENT_TOKEN }}
           API: ${{ github.server_url }}/api/v1/repos/${{ github.repository }}
@@ -58,34 +85,56 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      # Fully qualified: the runner resolves bare names against data.forgejo.org, which does not mirror this action.
+      # Pinned to a commit because it runs in the job that holds the upload keystore (v3.2.2).
+      - uses: https://github.com/android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          # The action's default package list includes the legacy "tools" package, which Google removed from
+          # the SDK repository; sdkmanager exits 1 on it. Gradle fetches build-tools/platforms itself.
+          packages: platform-tools
       - run: npm ci --no-audit --no-fund
       - name: Build web + sync Android
         run: npx ng build --configuration production && npx cap sync android
       - name: Build Android bundle
-        # Signed release bundle when the keystore secrets exist; otherwise a debug APK so the release still has an artifact.
+        # Decode the upload keystore, build a signed bundle and verify the signature (app/build.gradle reads
+        # ANDROID_KEYSTORE_PATH + passwords from the env). Missing secrets fail the job and alert: a release
+        # that silently shipped a debug APK would be easy to miss.
         env:
           ANDROID_KEYSTORE_FILE: ${{ secrets.ANDROID_KEYSTORE_FILE }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION: ${{ needs.tag.outputs.version }}
+          NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
+          NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }}
         run: |
           chmod +x android/gradlew
           cd android
-          if [ -n "$ANDROID_KEYSTORE_FILE" ]; then
-            ./gradlew bundleRelease
-            ls -la app/build/outputs/bundle/release/
-          else
-            echo "::warning::ANDROID_KEYSTORE_* secrets not set; building a debug APK instead of a signed bundle"
-            ./gradlew assembleDebug
-          fi
-      - uses: actions/upload-artifact@v4
+          for v in ANDROID_KEYSTORE_FILE ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!v}" ]; then
+              echo "::error::$v secret is empty; the release bundle cannot be signed (all four ANDROID_* secrets are required)"
+              [ "$VERSION" != smoke ] && [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: Android bundle NOT built" -H "Priority: high" -d "$v secret missing; no signed .aab for this release." "$NOTIFY_WEBHOOK"
+              exit 1
+            fi
+          done
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          echo "$ANDROID_KEYSTORE_FILE" | base64 -d > "$ANDROID_KEYSTORE_PATH"
+          trap 'rm -f "$ANDROID_KEYSTORE_PATH"' EXIT
+          ./gradlew bundleRelease
+          # Fail here rather than upload an unsigned bundle Play would reject. jarsigner exits 0 for "jar is
+          # unsigned", so grep the verdict; no -strict because the upload key is self-signed (chain warning).
+          # Exact match: "jar verified, with signer errors." must not pass.
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tee /tmp/jarsigner.txt
+          grep -qx 'jar verified\.' /tmp/jarsigner.txt
+          ls -la app/build/outputs/bundle/release/
+      # v4 only speaks GitHub's artifact API (GHESNotSupportedError on Forgejo); v3 works here. Upstream has
+      # deprecated v3, so revisit when Forgejo's artifact API gains v4 support (#177).
+      - uses: actions/upload-artifact@v3
         with:
           name: android-${{ needs.tag.outputs.version }}
-          path: |
-            android/app/build/outputs/bundle/release/*.aab
-            android/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: warn
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
       # TODO(store): upload the .aab to the Play internal track (fastlane supply) once a Play service-account JSON secret exists.
 
   functions:
@@ -101,19 +150,35 @@ jobs:
         with:
           node-version: '22' # functions/package.json engines
       - name: Build functions
+        if: needs.tag.outputs.version != 'smoke'
         run: cd functions && npm ci --no-audit --no-fund && npm run build
       - name: Deploy functions
+        # Auth: FIREBASE_SERVICE_ACCOUNT (service-account JSON, preferred) or the legacy FIREBASE_TOKEN from `firebase login:ci`.
         env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           NOTIFY_WEBHOOK: ${{ secrets.NOTIFY_WEBHOOK }}
           NOTIFY_FORMAT: ${{ vars.NOTIFY_FORMAT }}
           NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }} # optional: ntfy access token (Bearer); leave unset for user:pass-in-URL or open topics
           VERSION: ${{ needs.tag.outputs.version }}
         run: |
-          if [ -z "$FIREBASE_TOKEN" ]; then
-            echo "::error::FIREBASE_TOKEN secret not set; functions changed in $VERSION but were NOT deployed"
-            [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: functions NOT deployed" -H "Priority: high" -d "FIREBASE_TOKEN secret missing. Deploy by hand: cd functions && npm run deploy" "$NOTIFY_WEBHOOK"
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
+            trap 'rm -f "$GOOGLE_APPLICATION_CREDENTIALS"' EXIT
+            unset FIREBASE_TOKEN
+          elif [ -z "$FIREBASE_TOKEN" ]; then
+            echo "::error::Neither FIREBASE_SERVICE_ACCOUNT nor FIREBASE_TOKEN is set; functions changed in $VERSION but were NOT deployed"
+            [ "$VERSION" != smoke ] && [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: functions NOT deployed" -H "Priority: high" -d "FIREBASE_SERVICE_ACCOUNT / FIREBASE_TOKEN secret missing. Deploy by hand: cd functions && npm run deploy" "$NOTIFY_WEBHOOK"
             exit 1
           fi
-          cd functions && npx firebase-tools deploy --only functions --non-interactive
+          if [ "$VERSION" = smoke ]; then
+            # Smoke run: prove the credentials can see the project; deploy nothing. This does not prove the
+            # account has every role `deploy` needs; a real deploy that fails still alerts via NOTIFY_WEBHOOK.
+            PROJECT=$(node -p "JSON.parse(require('fs').readFileSync('.firebaserc','utf8')).projects.default")
+            npx firebase-tools@14 projects:list --non-interactive | tee /tmp/projects.txt
+            grep -q "$PROJECT" /tmp/projects.txt
+            exit 0
+          fi
+          cd functions && npx firebase-tools@14 deploy --only functions --non-interactive
           [ -n "$NOTIFY_WEBHOOK" ] && curl -sS -o /dev/null -H "Title: Paras $VERSION: functions deployed" -H "Priority: default" -d "Verify tomorrow's schedule with /check-schedule." "$NOTIFY_WEBHOOK" || true
