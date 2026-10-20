@@ -105,9 +105,16 @@ Fetch labels with `mcp__forgejo__issue_label__list` and use **only existing ones
 | dependency / tooling version bump | `upgrade` |
 | docs only | `documentation` |
 
-Plus exactly one `priority: …` label, plus `ai-ready` when `--ai` and Step 3 passes. If Step 3 fails because the
-work is inherently not for the pipeline (deploys, `ios/`/`android/`, `.forgejo/`, Firebase config,
-design decisions), add `human-only` instead so `/triage` and the agent skip it. Never create labels.
+Plus exactly one `priority: …` label, plus `ai-ready` when `--ai` and Step 3 passes. If Step 3 fails, pick the
+label that says *why*:
+
+- `human-only`: the work itself is a developer's (deploys, `ios/`/`android/`, `.forgejo/`, Firebase config,
+  protected files). `/triage` and the agent skip it for good.
+- `needs-decision`: the work would be agent-ready except for an open product or design question (which option,
+  what copy, which default). State the question and the options in the body. Once a maintainer answers in a
+  comment, replace `needs-decision` with `ai-ready`.
+
+Never use `human-only` to park a question, and never create labels.
 
 ## Step 6: Create and report
 
@@ -118,8 +125,9 @@ Create with `mcp__forgejo__issue__create` (owner `braxton`, repo `Paras`), then 
 #{number} {title}
 {url}
 Labels: {labels}
-Agent-ready: yes | no — {failing checklist item if no}{; labeled human-only if the work is inherently a developer's}
+Agent-ready: yes | no — {failing checklist item if no}{; labeled human-only if the work is inherently a developer's, or needs-decision with the open question}
 Next: {if ai-ready: "queued; runs on the next 6-hourly schedule or Actions -> Local agent -> Run workflow (PR cap permitting)"}
+      {else if needs-decision: "answer the question in a comment, then swap `needs-decision` for `ai-ready`"}
       {else: "add `ai-ready` when you want the agent to take it, or /implement-issue {number} to do it here"}
 ```
 

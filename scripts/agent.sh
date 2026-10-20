@@ -126,7 +126,7 @@ mapfile -t QUEUE < <(api "$API/issues?state=open&type=issues&labels=ai-ready&lim
       elif has("medium") then 2
       elif has("low")    then 3
       else 4 end;
-  map(select((names|index("ai-in-progress")|not) and (names|index("ai-failed")|not) and (names|index("human-only")|not)))
+  map(select((names|index("ai-in-progress")|not) and (names|index("ai-failed")|not) and (names|index("human-only")|not) and (names|index("needs-decision")|not)))
   | sort_by(prio, .number) | .[0:$k] | .[].number')
 
 log "Open ai/* PRs: $open_ai_prs/$PR_CAP. Taking ${#QUEUE[@]} issue(s): ${QUEUE[*]:-none}"

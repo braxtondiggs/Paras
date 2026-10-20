@@ -10,7 +10,8 @@ labels:
 The agent is a 30B local model with a 32k context. It cannot ask questions, browse, or install packages.
 Good tasks: one behavior, 1-3 files, done in under ~150 changed lines, verifiable by tests.
 Bad tasks: native (ios/, android/) or Firebase config changes, workflow edits, deploys, large refactors, "investigate X".
-Those get the `human-only` label instead of `ai-ready`.
+Those get the `human-only` label instead of `ai-ready`. A task that is agent-sized but has an open product or
+design question gets `needs-decision` (state the question and options); swap it for `ai-ready` once answered.
 Remove this comment before submitting.
 -->
 
