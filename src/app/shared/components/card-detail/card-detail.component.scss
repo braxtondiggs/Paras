@@ -65,13 +65,17 @@
 }
 
 .card-content {
-  padding: 0;
+  // A little air between the coloured header and the first row
+  padding: 8px 0 0;
 }
 
 .info-list {
   .info-item {
     --padding-start: 16px;
     --padding-end: 16px;
+    // Breathing room between the Alternate Side Parking and Parking Meters rows
+    --padding-top: 6px;
+    --padding-bottom: 6px;
 
     .info-label {
       margin: 0 0 4px 0;
