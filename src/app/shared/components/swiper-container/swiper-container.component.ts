@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
+  effect,
   ElementRef,
   input,
   output,
@@ -31,6 +32,7 @@ import type { SwiperContainer } from 'swiper/element';
       [spaceBetween]="spaceBetween()"
       [centeredSlides]="centeredSlides()"
       [allowTouchMove]="allowTouchMove()"
+      (swiperinit)="syncAllowTouchMove()"
       (swiperslidechange)="slideChange.emit()"
     >
       <ng-content />
@@ -52,8 +54,23 @@ export class SwiperContainerComponent {
 
   private readonly container = viewChild<ElementRef<SwiperContainer>>('container');
 
+  constructor() {
+    effect(() => this.syncAllowTouchMove());
+  }
+
   /** The underlying `<swiper-container>` element; its `.swiper` is the Swiper instance */
   get nativeElement(): SwiperContainer | undefined {
     return this.container()?.nativeElement;
+  }
+
+  /**
+   * Swiper's touch handlers read the live `swiper.allowTouchMove`, but setting the element property after
+   * Swiper has initialised only updates `swiper.params.allowTouchMove`, so mirror the input onto the instance.
+   * Runs from an effect (input changes) and on `swiperinit` (Swiper created after the effect ran).
+   */
+  protected syncAllowTouchMove(): void {
+    const allowTouchMove = this.allowTouchMove();
+    const swiper = this.container()?.nativeElement.swiper;
+    if (swiper) swiper.allowTouchMove = allowTouchMove;
   }
 }

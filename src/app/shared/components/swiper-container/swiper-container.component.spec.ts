@@ -72,4 +72,23 @@ describe('SwiperContainerComponent', () => {
     swiperContainer().dispatchEvent(new CustomEvent('swiperslidechange'));
     expect(slideChange).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps swiper.allowTouchMove in sync with the allowTouchMove input', () => {
+    spectator = createHost(
+      '<app-swiper-container [allowTouchMove]="allow"><swiper-slide>A</swiper-slide></app-swiper-container>',
+      { hostProps: { allow: false } }
+    );
+    // Swiper Element isn't registered under jsdom, so stand in for the instance it creates on init. Its live
+    // flag starts at the constructor default, which setting the element property afterwards doesn't touch
+    const swiper = { allowTouchMove: true };
+    Object.assign(swiperContainer(), { swiper });
+    swiperContainer().dispatchEvent(new CustomEvent('swiperinit'));
+    expect(spectator.component.nativeElement?.swiper.allowTouchMove).toBe(false);
+
+    spectator.setHostInput({ allow: true });
+    expect(swiper.allowTouchMove).toBe(true);
+
+    spectator.setHostInput({ allow: false });
+    expect(swiper.allowTouchMove).toBe(false);
+  });
 });
