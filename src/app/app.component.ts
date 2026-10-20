@@ -45,6 +45,9 @@ export class AppComponent implements OnInit {
   readonly isNetworkConnected = signal(true);
   readonly isAppReady = signal(false);
 
+  /** The "Network Error" alert while it is up; held as the create() promise so overlapping offline events share one alert. */
+  private networkAlert?: Promise<HTMLIonAlertElement>;
+
   ngOnInit() {
     // Before anything async: a slow or failed platform.ready() must not leave the splash up.
     if (this.platform.is('cordova')) this.hideSplashAfterFirstRender();
@@ -62,9 +65,16 @@ export class AppComponent implements OnInit {
     this.isNetworkConnected.set(networkStatus.connected);
     if (!networkStatus.connected) await this.showNetworkAlert();
 
-    // Listen for network changes to update offline state
-    Network.addListener('networkStatusChange', status => {
+    // Listen for network changes to update offline state and keep the alert in step with the connection
+    Network.addListener('networkStatusChange', async status => {
       this.isNetworkConnected.set(status.connected);
+      try {
+        if (status.connected) await this.dismissNetworkAlert();
+        else await this.showNetworkAlert();
+      } catch (error) {
+        // The plugin does not await this callback, so a failing alert would otherwise be an unhandled rejection.
+        console.error('Failed to update the network alert:', error);
+      }
     });
 
     if (!this.platform.is('ios')) this.getFCMNotification();
@@ -150,12 +160,43 @@ export class AppComponent implements OnInit {
   }
 
   private async showNetworkAlert() {
-    const alert = await this.alert.create({
+    if (this.networkAlert) return;
+
+    const pending = this.alert.create({
       header: 'Network Error',
       message: 'An Internet connection is required to use this application, please connect and try again.',
       backdropDismiss: false,
       keyboardClose: false
     });
+    this.networkAlert = pending;
+
+    let alert: HTMLIonAlertElement;
+    try {
+      alert = await pending;
+    } catch (error) {
+      if (this.networkAlert === pending) this.networkAlert = undefined;
+      throw error;
+    }
+
+    // The alert has no buttons, so one that is no longer current must never stay on screen. It stops being
+    // current when the connection comes back (and maybe drops again, which starts a newer alert) mid-create.
+    if (this.networkAlert !== pending) return;
+
+    void alert.onDidDismiss().then(() => {
+      if (this.networkAlert === pending) this.networkAlert = undefined;
+    });
     await alert.present();
+
+    // Same check for a reconnect while the alert was being presented.
+    if (this.networkAlert !== pending) await alert.dismiss();
+  }
+
+  private async dismissNetworkAlert() {
+    // Forget the alert now rather than on onDidDismiss: if the connection drops again during the dismiss
+    // animation, showNetworkAlert() must present a fresh alert instead of returning early.
+    const pending = this.networkAlert;
+    this.networkAlert = undefined;
+    const alert = await pending;
+    await alert?.dismiss();
   }
 }

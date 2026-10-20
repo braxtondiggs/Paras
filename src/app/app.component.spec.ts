@@ -66,7 +66,9 @@ describe('AppComponent', () => {
 
   const mockAlert = {
     present: jest.fn().mockResolvedValue(undefined),
-    dismiss: jest.fn().mockResolvedValue(true)
+    dismiss: jest.fn().mockResolvedValue(true),
+    // Stays pending by default: the alert counts as on screen until a test settles it.
+    onDidDismiss: jest.fn().mockReturnValue(new Promise(() => undefined))
   };
 
   const mockAlertController = {
@@ -169,6 +171,7 @@ describe('AppComponent', () => {
     jest.clearAllMocks();
     mockAlert.present.mockClear().mockResolvedValue(undefined);
     mockAlert.dismiss.mockClear().mockResolvedValue(true);
+    mockAlert.onDidDismiss.mockClear().mockReturnValue(new Promise(() => undefined));
     mockAlertController.create.mockClear().mockResolvedValue(mockAlert);
     mockPlatform.ready.mockClear().mockResolvedValue('dom');
     mockPlatform.is.mockClear().mockReturnValue(false);
@@ -282,6 +285,165 @@ describe('AppComponent', () => {
       await (component as any).initializeApp();
 
       expect(mockNetwork.addListener).toHaveBeenCalledWith('networkStatusChange', expect.any(Function));
+    });
+
+    const captureNetworkListener = () => {
+      let networkCallback: Function | undefined;
+      mockNetwork.addListener.mockImplementation(((event: string, callback: Function) => {
+        if (event === 'networkStatusChange') networkCallback = callback;
+        return Promise.resolve({ remove: jest.fn() });
+      }) as any);
+      return (status: { connected: boolean }) =>
+        networkCallback?.({ ...status, connectionType: status.connected ? 'wifi' : 'none' });
+    };
+
+    it('dismisses the network alert when the connection returns', async () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      mockNetwork.getStatus.mockResolvedValue({ connected: false, connectionType: 'none' });
+      const emitNetworkStatus = captureNetworkListener();
+
+      await (component as any).initializeApp();
+      expect(mockAlertController.create).toHaveBeenCalledTimes(1);
+      expect(mockAlert.present).toHaveBeenCalledTimes(1);
+      expect(mockAlert.dismiss).not.toHaveBeenCalled();
+
+      await emitNetworkStatus({ connected: true });
+
+      expect(component.isNetworkConnected()).toBe(true);
+      expect(mockAlert.dismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('presents the network alert when the connection drops after launch', async () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      const emitNetworkStatus = captureNetworkListener();
+
+      await (component as any).initializeApp();
+      expect(mockAlertController.create).not.toHaveBeenCalled();
+
+      await emitNetworkStatus({ connected: false });
+      expect(component.isNetworkConnected()).toBe(false);
+      expect(mockAlertController.create).toHaveBeenCalledTimes(1);
+      expect(mockAlert.present).toHaveBeenCalledTimes(1);
+
+      await emitNetworkStatus({ connected: false });
+      expect(mockAlertController.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('presents the network alert again after it was dismissed', async () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      let settleDismiss: () => void = () => undefined;
+      mockAlert.onDidDismiss.mockReturnValue(new Promise<void>(resolve => (settleDismiss = resolve)));
+      const emitNetworkStatus = captureNetworkListener();
+
+      await (component as any).initializeApp();
+      await emitNetworkStatus({ connected: false });
+      await emitNetworkStatus({ connected: true });
+      settleDismiss();
+      await Promise.resolve();
+      await emitNetworkStatus({ connected: false });
+
+      expect(mockAlertController.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('presents a new network alert when the connection drops again while the previous one is dismissing', async () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      const emitNetworkStatus = captureNetworkListener();
+
+      await (component as any).initializeApp();
+      await emitNetworkStatus({ connected: false });
+      // onDidDismiss never settles here: the first alert is still animating out when the connection drops again.
+      await emitNetworkStatus({ connected: true });
+      await emitNetworkStatus({ connected: false });
+
+      expect(mockAlert.dismiss).toHaveBeenCalledTimes(1);
+      expect(mockAlertController.create).toHaveBeenCalledTimes(2);
+      expect(mockAlert.present).toHaveBeenCalledTimes(2);
+    });
+
+    it('logs instead of rejecting when the network alert cannot be created', async () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      const failure = new Error('overlay failed');
+      mockAlertController.create.mockRejectedValue(failure);
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      const emitNetworkStatus = captureNetworkListener();
+
+      await (component as any).initializeApp();
+      await expect(emitNetworkStatus({ connected: false })).resolves.toBeUndefined();
+      expect(component.isNetworkConnected()).toBe(false);
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('network alert'), failure);
+
+      // The failed attempt must not block the next one.
+      mockAlertController.create.mockResolvedValue(mockAlert);
+      await emitNetworkStatus({ connected: false });
+      expect(mockAlert.present).toHaveBeenCalledTimes(1);
+      consoleSpy.mockRestore();
+    });
+
+    it('closes the network alert if the connection returned while it was being created', async () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      let resolveCreate: (alert: typeof mockAlert) => void = () => undefined;
+      mockAlertController.create.mockReturnValue(new Promise(resolve => (resolveCreate = resolve)));
+      const emitNetworkStatus = captureNetworkListener();
+
+      await (component as any).initializeApp();
+      const offline = emitNetworkStatus({ connected: false });
+      const online = emitNetworkStatus({ connected: true });
+      resolveCreate(mockAlert);
+      await Promise.all([offline, online]);
+
+      expect(mockAlertController.create).toHaveBeenCalledTimes(1);
+      expect(mockAlert.dismiss).toHaveBeenCalled();
+    });
+
+    const createAlertMock = () => ({
+      present: jest.fn().mockResolvedValue(undefined),
+      dismiss: jest.fn().mockResolvedValue(true),
+      onDidDismiss: jest.fn().mockReturnValue(new Promise(() => undefined))
+    });
+
+    it('does not show a stale network alert when the connection flaps while it is being created', async () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      const staleAlert = createAlertMock();
+      let resolveStaleCreate: (alert: typeof staleAlert) => void = () => undefined;
+      mockAlertController.create.mockReturnValueOnce(new Promise(resolve => (resolveStaleCreate = resolve)));
+      const emitNetworkStatus = captureNetworkListener();
+
+      await (component as any).initializeApp();
+      const offline = emitNetworkStatus({ connected: false });
+      const online = emitNetworkStatus({ connected: true });
+      const offlineAgain = emitNetworkStatus({ connected: false });
+      resolveStaleCreate(staleAlert);
+      await Promise.all([offline, online, offlineAgain]);
+
+      expect(mockAlertController.create).toHaveBeenCalledTimes(2);
+      expect(staleAlert.present).not.toHaveBeenCalled();
+      expect(mockAlert.present).toHaveBeenCalledTimes(1);
+
+      await emitNetworkStatus({ connected: true });
+      expect(mockAlert.dismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('dismisses a stale network alert when the connection flaps while it is being presented', async () => {
+      mockPlatform.is.mockImplementation((platform: string) => platform === 'cordova');
+      const staleAlert = createAlertMock();
+      let settlePresent: () => void = () => undefined;
+      staleAlert.present.mockReturnValue(new Promise<void>(resolve => (settlePresent = resolve)));
+      mockAlertController.create.mockResolvedValueOnce(staleAlert);
+      const emitNetworkStatus = captureNetworkListener();
+
+      await (component as any).initializeApp();
+      const offline = emitNetworkStatus({ connected: false });
+      await Promise.resolve();
+      expect(staleAlert.present).toHaveBeenCalledTimes(1);
+      await emitNetworkStatus({ connected: true });
+      await emitNetworkStatus({ connected: false });
+      staleAlert.dismiss.mockClear();
+      settlePresent();
+      await offline;
+
+      expect(staleAlert.dismiss).toHaveBeenCalledTimes(1);
+      expect(mockAlert.present).toHaveBeenCalledTimes(1);
+      expect(mockAlert.dismiss).not.toHaveBeenCalled();
     });
 
     it('should request FCM notifications on Android', async () => {

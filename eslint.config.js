@@ -34,6 +34,7 @@ export default [
         clearInterval: 'readonly',
         HTMLIonToastElement: 'readonly',
         HTMLIonLoadingElement: 'readonly',
+        HTMLIonAlertElement: 'readonly',
         CdvPurchase: 'readonly'
       }
     },
