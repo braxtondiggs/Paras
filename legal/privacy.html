@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy – ASP NYC</title>
+    <meta name="description" content="How the ASP NYC (Alternate Side Parking) app collects, uses and deletes data." />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #5a5a5a;
+        --brand: #7a5a8a;
+        --line: #e6e0ea;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #121212;
+          --fg: #f2f2f2;
+          --muted: #b5b5b5;
+          --brand: #a77eb0;
+          --line: #2c2630;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+      }
+      h1 {
+        color: var(--brand);
+        font-size: 1.8rem;
+        margin: 0 0 4px;
+      }
+      h2 {
+        font-size: 1.15rem;
+        margin: 32px 0 8px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+      p,
+      li {
+        margin: 0 0 12px;
+      }
+      .meta {
+        color: var(--muted);
+        margin-bottom: 24px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 8px 0 16px;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 8px 6px;
+        border-bottom: 1px solid var(--line);
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      a {
+        color: var(--brand);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Privacy Policy</h1>
+      <p class="meta">
+        ASP NYC – Alternate Side Parking (Android app <code>com.cymbit.paras</code>). Effective October 20, 2026.
+      </p>
+
+      <p>
+        ASP NYC is a free app by Cymbit that shows whether New York City alternate side parking rules and parking meters
+        are in effect, and can send you a notification about it. This page explains what the app collects, why, and how
+        to have it removed. The app shows no ads and never sells or shares your data with advertisers.
+      </p>
+
+      <h2>What the app collects</h2>
+      <table>
+        <tr>
+          <th>Data</th>
+          <th>Why</th>
+          <th>Where it is stored</th>
+        </tr>
+        <tr>
+          <td>An anonymous user ID</td>
+          <td>
+            Created automatically by Firebase Authentication the first time you open the app, so your settings can be
+            saved without an account, email or password.
+          </td>
+          <td>Firebase (Google), United States</td>
+        </tr>
+        <tr>
+          <td>Notification settings</td>
+          <td>
+            The hours you choose for the current-day and next-day notifications, and whether you want exceptions-only or
+            weekend notifications.
+          </td>
+          <td>Cloud Firestore (Google), under your anonymous ID</td>
+        </tr>
+        <tr>
+          <td>A push notification token</td>
+          <td>
+            A device token from Firebase Cloud Messaging so the app can deliver the notifications you turned on. It is
+            only stored if you grant the notification permission.
+          </td>
+          <td>Cloud Firestore (Google), under your anonymous ID</td>
+        </tr>
+        <tr>
+          <td>App version and sign-in times</td>
+          <td>
+            The app version you installed and the dates you first opened and last opened the app, saved alongside your
+            settings so stale records can be recognised.
+          </td>
+          <td>Cloud Firestore (Google), under your anonymous ID</td>
+        </tr>
+        <tr>
+          <td>App usage and performance data</td>
+          <td>
+            Which screens are opened, app version, device model and OS version, crash and load-time diagnostics, via
+            Firebase Analytics and Firebase Performance Monitoring. Both create a random app-instance identifier on your
+            device to group these events; it is not linked to your name or account. Used only to find problems and see
+            which features are used.
+          </td>
+          <td>Firebase (Google)</td>
+        </tr>
+        <tr>
+          <td>Donation purchase</td>
+          <td>
+            If you choose to support development with the in-app donation, Google Play processes the payment. The app
+            never sees your payment details and stores no purchase history of its own.
+          </td>
+          <td>Google Play</td>
+        </tr>
+      </table>
+      <p>
+        Dark-mode preference and a copy of the settings above are also kept on your device only, so the app works
+        offline. The parking schedule itself comes from public NYC data and contains nothing about you.
+      </p>
+
+      <h2>What the app does not collect</h2>
+      <ul>
+        <li>No name, email address, phone number, or password. There is no sign-up.</li>
+        <li>No location. The app does not ask for or use your position.</li>
+        <li>No contacts, photos, files, or calendar access.</li>
+        <li>No advertising identifier, and no ad networks.</li>
+      </ul>
+
+      <h2>Sharing</h2>
+      <p>
+        Data is processed by Google on our behalf through Firebase and Google Play, under
+        <a href="https://firebase.google.com/support/privacy" rel="noopener">Google's privacy and security terms</a>. We
+        do not share, sell or rent data to anyone else, and we do not use it for advertising.
+      </p>
+
+      <h2>Retention and deletion</h2>
+      <ul>
+        <li>
+          Your settings and token stay stored while you use the app. A token is removed automatically when a
+          notification cannot be delivered because the token is no longer valid (for example after you uninstall).
+        </li>
+        <li>
+          Uninstalling the app removes everything stored on the device. The server-side record stays until you ask for
+          it to be deleted.
+        </li>
+        <li>
+          To have your server-side record (anonymous ID, settings, token) deleted, open Settings &rarr; About this App
+          in the app, copy the anonymous ID shown there, and email it to
+          <a href="mailto:cymbit@gmail.com?subject=ASP%20NYC%20data%20deletion">cymbit@gmail.com</a>. The ID is the only
+          way to find your record, because there is no account, email or name attached to it. Requests are completed
+          within 30 days.
+        </li>
+      </ul>
+
+      <h2>Children</h2>
+      <p>The app is not directed to children under 13 and does not knowingly collect data from them.</p>
+
+      <h2>Security</h2>
+      <p>All data is transmitted over encrypted connections (HTTPS) and stored in Google's Firebase infrastructure.</p>
+
+      <h2>Changes</h2>
+      <p>If this policy changes, the new version will be posted at this address with an updated effective date.</p>
+
+      <h2>Contact</h2>
+      <p>Cymbit &middot; <a href="mailto:cymbit@gmail.com">cymbit@gmail.com</a></p>
+    </main>
+  </body>
+</html>

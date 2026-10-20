@@ -39,3 +39,20 @@ Then add `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`cymbit`) and `ANDROI
 **Firebase service account** for project `paras-293d5`: Google Cloud console → IAM & Admin → Service Accounts → create `forgejo-deploy` with the roles _Firebase Admin_, _Cloud Functions Admin_ and _Service Account User_ (add any further role the first deploy's error message names). Create a JSON key and paste its contents as `FIREBASE_SERVICE_ACCOUNT`.
 
 **Smoke test**: Actions → _Release_ → Run workflow on `dev`, `master` or a `release/*` branch. That path builds and signs the bundle (no tag or release), uploads it as the `android-smoke` artifact with `jar verified` in the log, and runs `firebase projects:list` with the service account instead of deploying functions (so it checks the credential, not every role a deploy needs). Other refs are refused unless the repository owner dispatches them, since the jobs hold the upload keystore and Firebase credentials; that check is a guard against mistakes, not a security boundary, because it lives in the dispatched branch's own workflow file. Don't dispatch from a branch whose workflow or build files you haven't read.
+
+## Privacy policy page
+
+`legal/privacy.html` is the policy linked from the Play Store listing. It is served by Firebase Hosting on the app's project at
+https://paras-293d5.web.app/privacy.html (the site root redirects there). Nothing else is hosted there; the web app is not
+deployed. After editing the page, redeploy from the folder:
+
+```bash
+cd legal && npx firebase-tools@14 deploy --only hosting --project paras-293d5
+```
+
+Keep the page in step with the Play Console Data safety form whenever a new Firebase service, permission or data field is added.
+
+The root `firebase.json` also has a `hosting` block (`public: www`, SPA rewrite) for the same default site. **Never run
+`firebase deploy` or `firebase deploy --only hosting` from the repo root**: it would replace the privacy page with the web
+app and break the URL on the Play listing. Functions deploys (`--only functions`) are unaffected. If the web app is ever
+hosted, give it its own site (`firebase hosting:sites:create`) and a `site` field, and leave the default site to `legal/`.
