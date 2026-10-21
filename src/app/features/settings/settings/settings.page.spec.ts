@@ -9,7 +9,7 @@ import { AlertController, LoadingController, Platform, ToastController } from '@
 import { Analytics, logEvent, setUserProperties } from '@angular/fire/analytics';
 import { LaunchReview } from '@awesome-cordova-plugins/launch-review/ngx';
 import { Preferences } from '@capacitor/preferences';
-import { SettingsService } from '@core/services';
+import { AuthService, SettingsService } from '@core/services';
 import type { Setting } from '@core/types/firestore.types';
 import { EmailComposer } from 'capacitor-email-composer';
 
@@ -49,6 +49,7 @@ jest.mock('capacitor-email-composer', () => ({
 describe('SettingsPage', () => {
   let spectator: Spectator<SettingsPage>;
   let settingsService: jest.Mocked<SettingsService>;
+  let authService: { uid: jest.Mock };
   let alertController: { create: jest.Mock };
   let toastController: { create: jest.Mock };
   let loadingController: { create: jest.Mock };
@@ -148,9 +149,14 @@ describe('SettingsPage', () => {
       updateSettings: jest.fn(async () => ({ success: true }))
     } as unknown as jest.Mocked<SettingsService>;
 
+    authService = {
+      uid: jest.fn().mockReturnValue(null)
+    };
+
     spectator = createComponent({
       providers: [
         { provide: SettingsService, useValue: settingsService },
+        { provide: AuthService, useValue: authService },
         { provide: Platform, useValue: platformMock },
         { provide: AlertController, useValue: alertController },
         { provide: NavController, useValue: {} },
@@ -302,6 +308,27 @@ describe('SettingsPage', () => {
     } finally {
       (spectator.component as any).launchReview = originalLaunchReview;
     }
+  });
+
+  it('shows the anonymous user ID in the about alert when signed in', async () => {
+    authService.uid.mockReturnValue('anon-uid-123');
+
+    await spectator.component.about();
+
+    const config = alertController.create.mock.calls[alertController.create.mock.calls.length - 1]?.[0] as any;
+    expect(config.message).toContain('Your anonymous ID');
+    expect(config.message).toContain('<code>anon-uid-123</code>');
+  });
+
+  it('omits the anonymous user ID from the about alert when there is no uid', async () => {
+    authService.uid.mockReturnValue(null);
+
+    await spectator.component.about();
+
+    const config = alertController.create.mock.calls[alertController.create.mock.calls.length - 1]?.[0] as any;
+    expect(config.message).toBe(
+      'This app was built and designed by Braxton Diggs of Cymbit Creative Studios.<br /><br />For more info and inquiries, email us at <strong>hello@braxtondiggs.com</strong>'
+    );
   });
 
   it('launches contact email composer when account exists', async () => {

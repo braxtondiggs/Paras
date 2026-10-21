@@ -40,7 +40,7 @@ import { heart, informationCircle, moon, thumbsUp } from 'ionicons/icons';
 import { Analytics, logEvent, setUserProperties } from '@angular/fire/analytics';
 
 import { LaunchReview } from '@awesome-cordova-plugins/launch-review/ngx';
-import { SettingsService, ThemeService, type Setting } from '@core/services';
+import { AuthService, SettingsService, ThemeService, type Setting } from '@core/services';
 
 import { EmailComposer } from 'capacitor-email-composer';
 
@@ -79,6 +79,7 @@ import objectSupport from 'dayjs/plugin/objectSupport';
 export class SettingsPage implements OnInit {
   // Services injected with modern inject() pattern
   private readonly analytics = inject(Analytics);
+  private readonly authService = inject(AuthService);
   private readonly settingsService = inject(SettingsService);
   private readonly themeService = inject(ThemeService);
   private readonly alert = inject(AlertController);
@@ -326,10 +327,13 @@ export class SettingsPage implements OnInit {
   }
 
   async about(): Promise<void> {
+    const uid = this.authService.uid();
+    const idLine = uid
+      ? `<br /><br />Your anonymous ID (include it in a data-deletion request):<br /><code>${uid}</code>`
+      : '';
     const alert = await this.alert.create({
       header: 'ASP For NYC',
-      message:
-        'This app was built and designed by Braxton Diggs of Cymbit Creative Studios.<br /><br />For more info and inquiries, email us at <strong>hello@braxtondiggs.com</strong>',
+      message: `This app was built and designed by Braxton Diggs of Cymbit Creative Studios.<br /><br />For more info and inquiries, email us at <strong>hello@braxtondiggs.com</strong>${idLine}`,
       buttons: [
         {
           text: 'Dismiss',
