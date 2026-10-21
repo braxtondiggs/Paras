@@ -239,11 +239,49 @@ describe('SettingsPage', () => {
   });
 
   it('reverts today selection when cancelled', () => {
-    spectator.component.settingsForm.controls['today'].setValue('immediately');
+    spectator.component.settingsForm.controls['today'].setValue('9:00');
 
     spectator.component.onTodayCancel();
 
     expect(spectator.component.settingsForm.value.today).toBe(spectator.component.settings().today);
+  });
+
+  it('saves an hour value when today selection changes to 9:00', () => {
+    settingsService.updateSettings.mockClear();
+
+    spectator.component.settingsForm.controls['today'].setValue('9:00');
+
+    expect(settingsService.updateSettings).toHaveBeenCalledWith({ today: '9:00' });
+  });
+
+  it('saves the evening placeholder when next day selection changes to 7:00', () => {
+    settingsService.updateSettings.mockClear();
+
+    spectator.component.settingsForm.controls['nextDay'].setValue('7:00');
+
+    expect(settingsService.updateSettings).toHaveBeenCalledWith({ nextDay: '7:00' });
+  });
+
+  it('offers only NotificationTime values in both notification selects', () => {
+    const todayValues = spectator.component.todayOptions.map(option => option.value);
+    const nextDayValues = spectator.component.nextDayOptions.map(option => option.value);
+
+    expect(todayValues).toEqual(['none', '7:00', '8:00', '9:00', '10:00', 'custom']);
+    expect(nextDayValues).toEqual(['none', '7:00', 'custom']);
+  });
+
+  it('shows the selected hour in the today helper text', () => {
+    spectator.component.settingsForm.patchValue({ today: '9:00' }, { emitEvent: false });
+    spectator.component.settings.update(s => ({ ...s, today: '9:00' }));
+
+    expect(spectator.component.todayNotificationMessage()).toBe('Next notification at 9:00 AM');
+  });
+
+  it('shows the evening time in the next day helper text for an hour value', () => {
+    spectator.component.settingsForm.patchValue({ nextDay: '7:00' }, { emitEvent: false });
+    spectator.component.settings.update(s => ({ ...s, nextDay: '7:00' }));
+
+    expect(spectator.component.nextDayNotificationMessage()).toBe('Next notification around 4:00 PM');
   });
 
   it('reverts next day selection when cancelled', () => {

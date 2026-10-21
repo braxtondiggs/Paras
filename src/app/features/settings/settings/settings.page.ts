@@ -41,6 +41,7 @@ import { Analytics, logEvent, setUserProperties } from '@angular/fire/analytics'
 
 import { LaunchReview } from '@awesome-cordova-plugins/launch-review/ngx';
 import { SettingsService, ThemeService, type Setting } from '@core/services';
+import type { NotificationTime } from '@core/types/firestore.types';
 
 import { EmailComposer } from 'capacitor-email-composer';
 
@@ -110,6 +111,22 @@ export class SettingsPage implements OnInit {
   // Constants
   private readonly purchasePlatform = CdvPurchase.Platform.GOOGLE_PLAY;
   private readonly format = 'H:mm';
+
+  readonly todayOptions: readonly { value: NotificationTime; label: string }[] = [
+    { value: 'none', label: 'None' },
+    { value: '7:00', label: '7:00 AM' },
+    { value: '8:00', label: '8:00 AM' },
+    { value: '9:00', label: '9:00 AM' },
+    { value: '10:00', label: '10:00 AM' },
+    { value: 'custom', label: 'Custom' }
+  ];
+
+  // '7:00' is a placeholder: the function sends every next-day hour value at 4:00 PM for now.
+  readonly nextDayOptions: readonly { value: NotificationTime; label: string }[] = [
+    { value: 'none', label: 'None' },
+    { value: '7:00', label: 'Evening (4:00 PM)' },
+    { value: 'custom', label: 'Custom' }
+  ];
 
   // Computed signals for derived state
   readonly todayNotificationMessage = computed(() =>
@@ -276,12 +293,19 @@ export class SettingsPage implements OnInit {
 
   private getNotificationMessage(type: string, action: string): string {
     const time = type === 'today' ? this.settings().todayCustom : this.settings().nextDayCustom;
-    const timeMap: Record<string, string> = {
+    const hourMessage = (hour: string) =>
+      type === 'today'
+        ? `Next notification at ${dayjs(hour, 'H:mm').format('h:mm A')}`
+        : 'Next notification around 4:00 PM';
+    const timeMap: Record<NotificationTime, string> = {
       none: 'Get notified about alternate side parking',
-      immediately: `Next notification around ${type === 'today' ? '7:30AM' : '4:00PM'}`,
+      '7:00': hourMessage('7:00'),
+      '8:00': hourMessage('8:00'),
+      '9:00': hourMessage('9:00'),
+      '10:00': hourMessage('10:00'),
       custom: `Next notification at ${dayjs(time, 'H:mm').format('h:mm A')}`
     };
-    return timeMap[action] ?? '';
+    return timeMap[action as NotificationTime] ?? '';
   }
 
   async onTodayChange(date: string): Promise<void> {

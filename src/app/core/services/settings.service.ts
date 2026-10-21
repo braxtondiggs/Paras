@@ -75,8 +75,8 @@ export class SettingsService extends BaseFirestoreService<Setting> {
   public readonly notificationsEnabled = computed(() => !this.settingsSignal()?.exceptionOnly);
   public readonly weekendNotifications = computed(() => this.settingsSignal()?.weekend ?? false);
   public readonly notificationType = computed(() => this.settingsSignal()?.type ?? 'NYC');
-  public readonly todayNotificationTime = computed(() => this.settingsSignal()?.today ?? 'am9');
-  public readonly nextDayNotificationTime = computed(() => this.settingsSignal()?.nextDay ?? 'pm7');
+  public readonly todayNotificationTime = computed(() => this.settingsSignal()?.today ?? 'none');
+  public readonly nextDayNotificationTime = computed(() => this.settingsSignal()?.nextDay ?? 'none');
 
   // Status signals
   public readonly isLoading = computed(() => this._isLoading());
